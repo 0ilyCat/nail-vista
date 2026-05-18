@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # MiMo API (OpenAI-compatible)
     MIMO_API_KEY: str = ""
     MIMO_BASE_URL: str = "https://token-plan-cn.xiaomimimo.com/v1"
-    MIMO_MODEL: str = "mimo-v2-flash"
+    MIMO_MODEL: str = "mimo-v2.5"
 
     # MediaPipe
     MEDIAPIPE_MAX_HANDS: int = 1
