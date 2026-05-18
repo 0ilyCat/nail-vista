@@ -8,3 +8,6 @@ uploads/
 results/
 *.egg-info/
 .DS_Store
+*.db
+test_setup.py
+backend/static/
