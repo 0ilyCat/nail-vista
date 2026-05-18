@@ -283,11 +283,11 @@ meituan-hackathon/
 - [x] OpenClaw 集成 (日报/趋势/策略 MiMo生成)
 - [x] AI 对话面板 (嵌入Dashboard)
 
-### Phase 5: 联调 & 展示 🔄
+### Phase 5: 联调 & 展示 ✅
 - [x] 全流程联调 (前端4180↔后端8190 proxy通过)
-- [ ] UI/UX 打磨
-- [ ] Demo 演示准备
-- [ ] 部署文档
+- [x] UI/UX 打磨 (首页/步骤指示器/骨架加载/动画)
+- [x] Demo 演示准备 (演示流程 + 推荐话术)
+- [x] 部署文档 (README.md + Docker指南)
 
 ---
 
