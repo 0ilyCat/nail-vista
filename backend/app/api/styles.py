@@ -1,10 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
+from pathlib import Path
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.models.models import NailStyle, StyleMetrics, TryonRecord
 
 router = APIRouter()
+settings = get_settings()
+
+STYLES_DIR = Path(settings.STATIC_DIR) / "styles"
+
+
+def _style_local_url(style_id: int) -> str:
+    """获取款式本地图片URL"""
+    fname = f"style_{style_id:02d}.png"
+    fpath = STYLES_DIR / fname
+    if fpath.exists():
+        return f"/static/styles/{fname}"
+    return ""
 
 
 @router.get("")
@@ -52,6 +66,7 @@ async def list_styles(
         items.append({
             "id": s.id,
             "name": s.name,
+            "local_url": _style_local_url(s.id),
             "original_url": s.original_url,
             "enhanced_url": s.enhanced_url,
             "category": s.category,

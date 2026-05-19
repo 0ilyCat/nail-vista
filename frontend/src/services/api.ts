@@ -6,11 +6,22 @@ const api = axios.create({
 });
 
 // ===== 试戴 =====
+export interface HandInfo {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface HandUploadResult {
-  id: number;
+  id: string;
   image_url: string;
   message: string;
 }
+
+export const getHandImages = async (): Promise<HandInfo[]> => {
+  const { data } = await api.get('/tryon/hand-images');
+  return data.hands;
+};
 
 export const uploadHand = async (file: File): Promise<HandUploadResult> => {
   const form = new FormData();
@@ -20,15 +31,15 @@ export const uploadHand = async (file: File): Promise<HandUploadResult> => {
 };
 
 export interface TryOnResult {
-  id: number;
   result_url: string;
   duration_ms: number;
   style_name: string;
+  source: string;
 }
 
-export const startTryOn = async (handImageId: number, styleId: number): Promise<TryOnResult> => {
+export const startTryOn = async (handId: string, styleId: number): Promise<TryOnResult> => {
   const form = new FormData();
-  form.append('hand_image_id', String(handImageId));
+  form.append('hand_id', handId);
   form.append('style_id', String(styleId));
   const { data } = await api.post('/tryon/try-on', form);
   return data;
@@ -43,6 +54,7 @@ export const getTryonHistory = async (limit = 20, offset = 0) => {
 export interface NailStyleItem {
   id: number;
   name: string;
+  local_url: string;
   original_url: string;
   enhanced_url: string;
   category: string;

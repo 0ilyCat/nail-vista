@@ -98,20 +98,15 @@ export default function StyleBrowsePage() {
                     className="style-card"
                     bodyStyle={{ padding: 0 }}
                     cover={
-                      <div className="style-cover" style={{ height: 160, position: 'relative' }}>
-                        <div style={{
-                          width: '100%', height: '100%',
-                          background: `linear-gradient(135deg, ${item.color_tone || '#ff69b4'}, ${item.color_tone || '#ff69b4'}44, #fff)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <span style={{ fontSize: 56, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>💅</span>
-                        </div>
-                        <Tag
-                          color="pink"
-                          style={{ position: 'absolute', top: 8, right: 8, borderRadius: 4 }}
-                        >
-                          {item.category}
-                        </Tag>
+                      <div className="style-cover" style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
+                        {item.local_url ? (
+                          <img src={item.local_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${item.color_tone || '#ff69b4'}, ${item.color_tone || '#ff69b4'}44, #fff)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 56 }}>💅</span>
+                          </div>
+                        )}
+                        <Tag color="pink" style={{ position: 'absolute', top: 8, right: 8, borderRadius: 4 }}>{item.category}</Tag>
                       </div>
                     }
                     actions={[

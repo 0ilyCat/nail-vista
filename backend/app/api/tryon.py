@@ -1,18 +1,47 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from pathlib import Path
 import time
 import uuid
+import json
 
 from app.core.database import get_db
 from app.core.config import get_settings
-from app.models.models import HandImage, NailStyle, TryonRecord
+from app.models.models import HandImage, NailStyle, TryonRecord, StyleMetrics
 from app.services.tryon_engine import tryon_engine
+from datetime import datetime
 
 router = APIRouter()
 settings = get_settings()
+
+HANDS_DIR = Path(settings.STATIC_DIR) / "hands"
+STYLES_DIR = Path(settings.STATIC_DIR) / "styles"
+RESULTS_DIR = Path(settings.STATIC_DIR) / "results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _scan_hand_files() -> list[dict]:
+    """扫描本地手图文件"""
+    hands = []
+    if not HANDS_DIR.exists():
+        return hands
+    for f in sorted(HANDS_DIR.glob("hand_*.*")):
+        name = f.stem  # hand_01
+        hands.append({
+            "id": name,
+            "name": name.replace("_", " ").title(),
+            "url": f"/static/hands/{f.name}",
+            "path": str(f),
+        })
+    return hands
+
+
+@router.get("/hand-images")
+async def list_hand_images():
+    """获取所有可用的预置手部照片"""
+    hands = _scan_hand_files()
+    return {"hands": hands, "total": len(hands)}
 
 
 @router.post("/upload-hand")
@@ -20,12 +49,12 @@ async def upload_hand(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """上传手部照片，存入数据库"""
+    """上传手部照片"""
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "仅支持图片文件")
 
     ext = Path(file.filename).suffix or ".png"
-    filename = f"{uuid.uuid4().hex}{ext}"
+    filename = f"upload_{uuid.uuid4().hex}{ext}"
     filepath = Path(settings.UPLOAD_DIR) / filename
 
     content = await file.read()
@@ -41,67 +70,92 @@ async def upload_hand(
     await db.commit()
     await db.refresh(hand)
 
-    return {"id": hand.id, "image_url": hand.image_url, "message": "上传成功"}
+    return {"id": f"upload_{hand.id}", "image_url": hand.image_url, "message": "上传成功"}
 
 
 @router.post("/try-on")
 async def try_on(
-    hand_image_id: int = Form(...),
+    hand_id: str = Form(""),        # "hand_01" (预置) 或 "upload_123" (上传)
+    hand_image_id: int = Form(None),  # 兼容旧版
     style_id: int = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """执行AI试戴，生成合成图"""
-    hand = await db.get(HandImage, hand_image_id)
-    if not hand or not hand.local_path:
-        raise HTTPException(404, "手图不存在")
-    if not Path(hand.local_path).exists():
-        raise HTTPException(404, "手图文件丢失")
-
+    """执行AI试戴"""
     style = await db.get(NailStyle, style_id)
     if not style:
         raise HTTPException(404, "款式不存在")
 
     t0 = time.time()
+    result_url = ""
+    hand_name = ""
 
-    # 读取本地文件；款式用增强图或原始图
-    hand_bytes = Path(hand.local_path).read_bytes()
+    # ===== 1. 优先查找预生成的百炼AI试戴图 =====
+    real_hand_id = hand_id
+    if hand_image_id is not None:
+        real_hand_id = f"upload_{hand_image_id}"
 
-    # 款式图：优先用增强图URL，需要本地缓存
-    style_path = _find_cached_style(style)
-    if style_path:
-        style_bytes = Path(style_path).read_bytes()
+    if real_hand_id and real_hand_id.startswith("hand_"):
+        # 预置手图：按命名约定查找预生成结果
+        hand_name = real_hand_id  # hand_01
+        style_name = f"style_{style_id:02d}"
+        result_name = f"{hand_name}+{style_name}.png"
+        result_path = RESULTS_DIR / result_name
+
+        if result_path.exists() and result_path.stat().st_size > 1000:
+            result_url = f"/static/results/{result_name}"
+            duration_ms = int((time.time() - t0) * 1000)
+            hand_image_id_db = None
+        else:
+            # 没有预生成图，用MediaPipe+OpenCV合成
+            hand_path = HANDS_DIR / f"{hand_name}.png"
+            if hand_path.exists():
+                style_cache = STYLES_DIR / f"style_{style_id:02d}.png"
+                try:
+                    hand_bytes = hand_path.read_bytes()
+                    style_bytes = style_cache.read_bytes() if style_cache.exists() else _gen_placeholder(style.color_tone)
+                    result_bytes = tryon_engine.process_tryon(hand_bytes, style_bytes)
+                    result_filename = f"tryon_{uuid.uuid4().hex}.png"
+                    (Path(settings.RESULT_DIR) / result_filename).write_bytes(result_bytes)
+                    result_url = f"/results/{result_filename}"
+                except Exception as e:
+                    raise HTTPException(500, f"试戴处理失败: {e}")
+            else:
+                raise HTTPException(404, f"手图文件不存在: {hand_name}")
+            hand_image_id_db = None
+    elif real_hand_id and real_hand_id.startswith("upload_"):
+        # 用户上传的手图：用MediaPipe+OpenCV合成
+        upload_db_id = int(real_hand_id.replace("upload_", ""))
+        hand = await db.get(HandImage, upload_db_id)
+        if not hand or not hand.local_path or not Path(hand.local_path).exists():
+            raise HTTPException(404, "手图不存在")
+        hand_bytes = Path(hand.local_path).read_bytes()
+        style_cache = STYLES_DIR / f"style_{style_id:02d}.png"
+        style_bytes = style_cache.read_bytes() if style_cache.exists() else _gen_placeholder(style.color_tone)
+        try:
+            result_bytes = tryon_engine.process_tryon(hand_bytes, style_bytes)
+        except Exception as e:
+            raise HTTPException(500, f"试戴处理失败: {e}")
+        result_filename = f"tryon_{uuid.uuid4().hex}.png"
+        (Path(settings.RESULT_DIR) / result_filename).write_bytes(result_bytes)
+        result_url = f"/results/{result_filename}"
+        hand_image_id_db = upload_db_id
     else:
-        # 生成纯色占位图作为 fallback
-        style_bytes = _generate_placeholder(style.color_tone or "#ff69b4")
-
-    try:
-        result_bytes = tryon_engine.process_tryon(hand_bytes, style_bytes)
-    except Exception as e:
-        raise HTTPException(500, f"试戴处理失败: {e}")
+        raise HTTPException(400, "请提供 hand_id 或 hand_image_id")
 
     duration_ms = int((time.time() - t0) * 1000)
 
-    result_filename = f"tryon_{uuid.uuid4().hex}.png"
-    result_path = Path(settings.RESULT_DIR) / result_filename
-    result_path.write_bytes(result_bytes)
-
+    # 记录到数据库
     record = TryonRecord(
-        hand_image_id=hand_image_id,
+        hand_image_id=hand_image_id_db,
         nail_style_id=style_id,
-        result_url=f"/results/{result_filename}",
+        result_url=result_url,
         duration_ms=duration_ms,
     )
     db.add(record)
 
     # 更新指标
-    from app.models.models import StyleMetrics
-    from datetime import datetime, timedelta
-
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    stmt = select(StyleMetrics).where(
-        StyleMetrics.style_id == style_id,
-        StyleMetrics.date == today,
-    )
+    stmt = select(StyleMetrics).where(StyleMetrics.style_id == style_id, StyleMetrics.date == today)
     result = await db.execute(stmt)
     metric = result.scalar_one_or_none()
     if metric:
@@ -110,34 +164,22 @@ async def try_on(
         db.add(StyleMetrics(style_id=style_id, date=today, tryons=1))
 
     await db.commit()
-    await db.refresh(record)
 
     return {
-        "id": record.id,
-        "result_url": record.result_url,
+        "result_url": result_url,
         "duration_ms": duration_ms,
         "style_name": style.name,
+        "source": "pre-generated" if "static/results" in result_url and "results/" in result_url and "tryon_" not in result_url else "opencv" if result_url else "mock",
     }
 
 
 @router.get("/history")
-async def tryon_history(
-    limit: int = 20,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_db),
-):
-    """试戴历史记录"""
-    stmt = (
-        select(TryonRecord)
-        .order_by(desc(TryonRecord.created_at))
-        .offset(offset)
-        .limit(limit)
-    )
+async def tryon_history(limit: int = 20, offset: int = 0, db: AsyncSession = Depends(get_db)):
+    """试戴历史"""
+    stmt = select(TryonRecord).order_by(desc(TryonRecord.created_at)).offset(offset).limit(limit)
     result = await db.execute(stmt)
     records = result.scalars().all()
-
-    count_stmt = select(func.count(TryonRecord.id))
-    total = (await db.execute(count_stmt)).scalar()
+    total = (await db.execute(select(func.count(TryonRecord.id)))).scalar()
 
     items = []
     for r in records:
@@ -145,33 +187,18 @@ async def tryon_history(
         items.append({
             "id": r.id,
             "style_id": r.nail_style_id,
-            "style_name": style.name if style else "未知",
+            "style_name": style.name if style else "",
             "result_url": r.result_url,
             "duration_ms": r.duration_ms,
             "created_at": r.created_at.isoformat() if r.created_at else "",
         })
-
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
-
-
-def _find_cached_style(style: NailStyle) -> str | None:
-    """查找本地缓存的款式图"""
-    cache_dir = Path(settings.STATIC_DIR) / "styles"
-    for url in [style.enhanced_url, style.original_url]:
-        if not url:
-            continue
-        fname = Path(url).name
-        path = cache_dir / fname
-        if path.exists():
-            return str(path)
-    return None
+    return {"items": items, "total": total}
 
 
-def _generate_placeholder(color: str) -> bytes:
-    """生成纯色占位图 (100x60 指甲图)"""
+def _gen_placeholder(color: str) -> bytes:
     from PIL import Image
-    img = Image.new("RGBA", (100, 60), color)
     import io
+    img = Image.new("RGBA", (100, 60), color)
     buf = io.BytesIO()
     img.save(buf, "PNG")
     return buf.getvalue()
