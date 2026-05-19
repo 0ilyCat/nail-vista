@@ -197,6 +197,7 @@ def main():
     parser.add_argument("--sample", type=int, default=0, help="只生成N张示例")
     parser.add_argument("--hands", type=str, default="", help="手图范围，如 1-3")
     parser.add_argument("--styles", type=str, default="", help="款式范围，如 1-5")
+    parser.add_argument("--check", action="store_true", help="仅检查待生成状态")
     parser.add_argument("--xlsx", type=str, 
                         default="../命题三美甲评测数据（对外版）.xlsx",
                         help="Excel数据文件路径")
@@ -234,6 +235,21 @@ def main():
 
     total = len(pairs)
     print(f"🎯 本次将生成 {total} 张试戴效果图\n")
+
+    # --check 模式：仅统计
+    if args.check:
+        exists = 0
+        missing = 0
+        for hand_path, style_path, hand_idx, style_id in pairs:
+            result_name = f"hand_{hand_idx:02d}+style_{style_id:02d}.png"
+            if os.path.exists(str(RESULTS_DIR / result_name)):
+                exists += 1
+            else:
+                missing += 1
+        print(f"  已存在: {exists}")
+        print(f"  待生成: {missing}")
+        print(f"  总计:   {total}")
+        return
 
     success = 0
     for i, (hand_path, style_path, hand_idx, style_id) in enumerate(pairs, 1):
