@@ -10,10 +10,6 @@ export default defineConfig({
         target: 'http://localhost:8190',
         changeOrigin: true,
       },
-      '/static': {
-        target: 'http://localhost:8190',
-        changeOrigin: true,
-      },
       '/uploads': {
         target: 'http://localhost:8190',
         changeOrigin: true,
