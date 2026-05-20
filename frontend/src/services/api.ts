@@ -10,11 +10,14 @@ export interface HandInfo {
   id: string;
   name: string;
   url: string;
+  type: string;
+  path?: string;
 }
 
 export interface HandUploadResult {
-  id: string;
+  hand_id: string;
   image_url: string;
+  db_id: number;
   message: string;
 }
 

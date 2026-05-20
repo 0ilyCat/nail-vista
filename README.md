@@ -1,204 +1,218 @@
-# 💅 美甲AI试戴与智能运营
+<div align="center">
 
-美团黑马大赛 — 命题三：美甲评测数据
+<img src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" />
+<img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
+<img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
+<img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+<img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white" />
+<img src="https://img.shields.io/badge/MediaPipe-0.10-FF6F00?style=flat-square&logo=google&logoColor=white" />
+<img src="https://img.shields.io/badge/AI-MiMo_V2.5-FF69B4?style=flat-square&logo=openai&logoColor=white" />
+<img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 
-**双引擎系统**：AI 虚拟试戴 + MiMo 大模型智能运营分析
+</div>
 
----
+# 💅 NailVista — AI Nail Art Try-On & Smart Operations
 
-## ✨ 功能概览
-
-| 模块 | 功能 | 技术 |
-|------|------|------|
-| 🏠 **首页** | 系统概览、热门TOP5、快捷入口 | React 19 |
-| 💅 **AI试戴** | 上传手图 → 选款式 → 秒级生成试戴效果 | MediaPipe + OpenCV |
-| 🎨 **款式浏览** | 25款美甲，分类筛选/搜索/排序 | FastAPI + SQLite |
-| 📊 **运营看板** | 热度排行/7日趋势/AI对话/日报生成 | MiMo V2.5 + Recharts |
-
-### AI试戴流程
-
-```
-用户上传手部照片
-    ↓
-MediaPipe 21点手部关键点检测
-    ↓
-指甲区域定位 (5指独立估算)
-    ↓
-款式图透视变换 + 椭圆遮罩 + 边缘羽化
-    ↓
-OpenCV 颜色叠加 + 光影效果
-    ↓
-返回合成图 (200-800ms)
-```
+> 美甲AI虚拟试戴 × 智能运营分析 —— 让用户「所见即所得」，让运营「实时感知趋势」
 
 ---
 
-## 🚀 快速开始
+## ✨ What is NailVista?
 
-### 环境要求
+NailVista is a dual-engine platform for **AI-powered virtual nail art try-on** and **intelligent operations analytics**, built for the Meituan Hackathon.
 
-- Python 3.12+ (Conda)
+- 👁️ **AI Try-On**: Upload a hand photo → pick a nail style → see it on your hand in seconds
+- 📊 **Smart Dashboard**: Real-time hot rankings, 7-day trend charts, AI-generated daily reports
+- 🤖 **MiMo AI Assistant**: Natural language Q&A, auto-generate operations strategies
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────┐     ┌──────────────────────────┐     ┌─────────────────┐
+│   React 19 + Vite   │────▶│   FastAPI (port 8190)     │────▶│   SQLite / PG    │
+│   port 4180         │     │                          │     └─────────────────┘
+│                     │     │  /api/styles   款式管理    │
+│  HomePage           │     │  /api/tryon    试戴引擎    │     ┌─────────────────┐
+│  TryOnPage          │     │  /api/analytics 数据分析   │────▶│  MiMo V2.5       │
+│  StyleBrowsePage    │     │  /api/operations AI运营    │     │  Token Plan      │
+│  DashboardPage      │     │                          │     └─────────────────┘
+└─────────────────────┘     │  MediaPipe + OpenCV       │
+                            │  百炼 qwen-image-2.0-pro   │
+                            └──────────────────────────┘
+```
+
+### AI Try-On Pipeline
+
+```
+Upload Hand Photo → MediaPipe 21-Point Detection → Nail Region Estimation
+                                                        ↓
+                    Style Image (perspective warp)  →  OpenCV Overlay + Edge Blending
+                                                        ↓
+                    Bailian qwen-image-2.0-pro      →  AI-Generated Result (cached)
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.12+ (conda recommended)
 - Node.js 22.16+
-- (可选) Docker + Docker Compose
+- [DASHSCOPE_API_KEY](https://dashscope.console.aliyun.com/) (for AI image generation)
 
-### 本地开发
+### Development
 
 ```bash
-# 1. 克隆项目
-cd meituan-hackathon
-
-# 2. 创建 Python 环境
-conda create -n meituan-hackathon python=3.12 -y
-conda activate meituan-hackathon
-
-# 3. 安装后端依赖
+# 1. Backend
+conda create -n nailvista python=3.12 -y && conda activate nailvista
 cd backend
 pip install -r requirements.txt
+python import_data.py              # Seed data (25 styles + metrics)
+uvicorn app.main:app --port 8190 --reload
 
-# 4. 导入种子数据
-python import_data.py
-
-# 5. 启动后端 (端口 8190)
-uvicorn app.main:app --host 0.0.0.0 --port 8190 --reload
-
-# 6. 安装前端依赖 & 启动 (端口 4180)
-cd ../frontend
+# 2. Frontend
+cd frontend
 npm install
-npm run dev
+npm run dev                        # → http://localhost:4180
 ```
 
-打开浏览器访问 **http://localhost:4180**
-
-### Docker 一键部署
+### Generate AI Try-On Images (Batch)
 
 ```bash
-# 设置 MiMo API Key
-export MIMO_API_KEY=your_key_here
+cd backend
+export DASHSCOPE_API_KEY=sk-xxxx
 
-# 启动全部服务
+# Check status
+python batch_generate.py --check
+
+# Generate sample
+python batch_generate.py --sample 5
+
+# Generate all (13 hands × 25 styles = 325 images)
+python batch_generate.py
+```
+
+### Docker (Optional)
+
+```bash
 docker compose up -d --build
-
-# 导入数据 (PostgreSQL)
-docker compose exec backend python import_data.py
-
-# 访问
-# 前端: http://localhost:4180
-# API文档: http://localhost:8190/docs
+# Frontend: http://localhost:4180
+# API docs: http://localhost:8190/docs
 ```
 
 ---
 
-## 📡 API 文档
+## 📡 API Reference
 
-启动后端后访问 `http://localhost:8190/docs` 查看 Swagger 文档。
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Health check |
+| `GET` | `/api/tryon/hand-images` | List all hand images (user + preset) |
+| `POST` | `/api/tryon/upload-hand` | Upload a hand photo |
+| `POST` | `/api/tryon/try-on` | Execute AI try-on (cache-first, generate on miss) |
+| `GET` | `/api/tryon/history` | Try-on history |
+| `GET` | `/api/styles` | List nail styles (filter/sort/page) |
+| `GET` | `/api/styles/{id}` | Style detail with stats |
+| `GET` | `/api/styles/hot/ranking` | Hot ranking by hot score |
+| `GET` | `/api/analytics/overview` | Operations overview |
+| `GET` | `/api/analytics/trends` | N-day trend data |
+| `POST` | `/api/operations/chat` | AI assistant chat (MiMo) |
+| `POST` | `/api/operations/reports/generate` | Generate daily/trend/strategy report |
 
-### 核心接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/styles?category=&search=&sort=` | 款式列表 |
-| GET | `/api/styles/{id}` | 款式详情 |
-| GET | `/api/styles/hot/ranking?limit=&days=` | 热门排行 |
-| GET | `/api/tryon/history?limit=` | 试戴历史 |
-| POST | `/api/tryon/upload-hand` | 上传手图 |
-| POST | `/api/tryon/try-on` | 执行试戴 |
-| GET | `/api/analytics/overview` | 运营总览 |
-| GET | `/api/analytics/trends?days=` | 趋势数据 |
-| POST | `/api/operations/chat` | AI对话 |
-| POST | `/api/operations/reports/generate` | 生成报告 |
-
----
-
-## 🏗️ 技术架构
-
-```
-Frontend (React 19 + Vite)     Backend (FastAPI)         AI Engine
-┌──────────────────┐          ┌─────────────────┐      ┌──────────────┐
-│  HomePage         │  HTTP    │  /api/styles     │      │  MiMo V2.5   │
-│  TryOnPage        │────────→│  /api/tryon      │─────→│  Token Plan  │
-│  StyleBrowsePage  │  Proxy  │  /api/analytics  │      │  (OpenAI SDK) │
-│  DashboardPage    │          │  /api/operations │      └──────────────┘
-└──────────────────┘          └────────┬────────┘
-      Port 4180                       │           ┌──────────────┐
-                                      └──────────→│  SQLite/     │
-                                         Port 8190 │  PostgreSQL  │
-                                                   └──────────────┘
-```
-
-### 数据库
-
-默认使用 **SQLite**（零配置），设环境变量 `USE_POSTGRES=1` 切换 PostgreSQL。
-
-表结构：
-
-| 表 | 说明 | 数据量 |
-|----|------|--------|
-| `nail_styles` | 美甲款式库 | 25 |
-| `hand_images` | 手部照片 | 13 |
-| `tryon_records` | 试戴记录 | 200+ |
-| `style_metrics` | 日级运营指标 | 750 (25款×30天) |
-| `operations_reports` | AI 生成报告 | 按需 |
-| `user_feedback` | 用户反馈 | 按需 |
+Full Swagger docs: `http://localhost:8190/docs`
 
 ---
 
-## 🧪 演示指引
-
-### 演示流程 (5分钟)
-
-1. **首页** (1min) — 展示系统概览、热门TOP5
-2. **AI试戴** (2min) — 选择一张手图上传 → 挑选款式 → 查看合成效果
-3. **款式浏览** (1min) — 展示25款分类筛选、搜索
-4. **运营看板** (1min) — 实时数据、趋势图、AI对话生成日报
-
-### 推荐话术
-
-> "这是一个AI驱动的美甲虚拟试戴与智能运营系统。用户上传手部照片后，MediaPipe 精确检测21个手部关键点，然后 OpenCV 将选中的美甲款式通过透视变换叠加到指甲区域，整个过程在500ms内完成。运营侧，系统自动采集用户行为数据，通过 MiMo 大模型生成日报和运营策略。"
-
----
-
-## 📁 项目结构
+## 🗂️ Project Structure
 
 ```
-meituan-hackathon/
-├── frontend/                    # React 19 + Vite + TypeScript
+nail-vista/
+├── frontend/                     # React 19 + Vite + TypeScript
 │   ├── src/
-│   │   ├── pages/               # 4个页面 (Home/TryOn/StyleBrowse/Dashboard)
-│   │   ├── components/common/   # 主布局
-│   │   └── services/api.ts      # API 服务层 (axios)
-│   ├── Dockerfile
-│   └── nginx.conf
-├── backend/                     # FastAPI + Python 3.12
+│   │   ├── pages/                # HomePage / TryOnPage / StyleBrowsePage / DashboardPage
+│   │   ├── components/common/    # MainLayout
+│   │   └── services/api.ts       # Axios API layer
+│   ├── public/static/            # Local images (styles, hands, results)
+│   └── vite.config.ts
+├── backend/                      # FastAPI + Python 3.12
 │   ├── app/
-│   │   ├── api/                 # 4组 REST 端点
-│   │   ├── core/                # 配置 + 数据库
-│   │   ├── models/              # SQLAlchemy 模型
-│   │   └── services/            # 试戴引擎/趋势分析/MiMo AI
-│   ├── import_data.py           # 数据种子脚本
-│   └── Dockerfile
-├── docker-compose.yml           # 一键部署
-├── PLAN.md                      # 项目规划
+│   │   ├── api/                  # tryon / styles / analytics / operations
+│   │   ├── core/                 # config / database
+│   │   ├── models/               # SQLAlchemy models (6 tables)
+│   │   └── services/             # tryon_engine / bailian_service / openclaw_service / trend_analyzer
+│   ├── batch_generate.py         # Batch AI image generation script
+│   ├── import_data.py            # Data seeding script
+│   └── requirements.txt
+├── docker-compose.yml            # Optional Docker deployment
+├── PLAN.md                       # Full project plan
 └── README.md
 ```
 
 ---
 
-## 🔑 环境变量
+## 📊 Database
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `MIMO_API_KEY` | MiMo Token Plan API Key | (必填) |
-| `USE_POSTGRES` | 使用 PostgreSQL | `false` (SQLite) |
-| `DATABASE_URL` | 自定义数据库 URL | 自动生成 |
-| `DEBUG` | 调试模式 | `true` |
+| Table | Description | Records |
+|-------|-------------|---------|
+| `nail_styles` | Nail art catalog (25 styles, 8 categories) | 25 |
+| `hand_images` | Hand photos (user uploads + presets) | 13+ |
+| `tryon_records` | Try-on history | 200+ |
+| `style_metrics` | Daily operations metrics (25 styles × 30 days) | 750 |
+| `operations_reports` | AI-generated reports | on-demand |
+| `user_feedback` | User ratings & comments | on-demand |
+
+Default: **SQLite** (zero-config). Set `USE_POSTGRES=1` for PostgreSQL.
 
 ---
 
-## 📝 开发阶段
+## 🎯 Key Features
 
-- [x] Phase 1: 环境搭建 & 项目初始化
-- [x] Phase 2: 数据层 & 基础 CRUD API
-- [x] Phase 3: AI试戴模块 (MediaPipe + OpenCV)
-- [x] Phase 4: 智能运营模块 (MiMo AI)
-- [x] Phase 5: 联调 & 展示 & 文档
+### Try-On Cache Strategy
+
+```
+hand_name + style_id → static/results/{hand_name}+style_{id}.png
+                         ↑
+                    ┌────┴────┐
+                    │ Exists?  │
+                    └────┬────┘
+                   Yes ↓  ↓ No
+                Return    Call Bailian API
+                cached    → Save to results/
+                          → Return result
+```
+
+- First try-on for a combination: **~5-10s** (Bailian AI generation)
+- Subsequent tries: **instant** (cached on disk)
+- Bailian unavailable → **fallback to MediaPipe + OpenCV**
+
+### Smart Operations
+
+- **Hot Score Algorithm**: `tryons×0.4 + favorites×0.25 + views×0.2 + shares×0.1 + duration_bonus`
+- **MiMo AI**: Real-time chat, daily/weekly reports, trend analysis, strategy recommendations
+
+---
+
+## 🔑 Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MIMO_API_KEY` | MiMo Token Plan API Key | (required for chat) |
+| `DASHSCOPE_API_KEY` | Alibaba Bailian API Key | (required for image gen) |
+| `USE_POSTGRES` | Use PostgreSQL instead of SQLite | `false` |
+| `DATABASE_URL` | Custom database URL | auto-generated |
+| `DEBUG` | Debug mode | `true` |
+
+---
+
+## 📝 License
+
+MIT © 2026
+
+---
+
+<div align="center">
+<sub>Built with 💅 by 0ilyCat · Powered by MiMo & Bailian AI</sub>
+</div>

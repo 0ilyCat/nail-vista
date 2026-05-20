@@ -84,10 +84,7 @@ def generate_tryon(hand_path: str, style_path: str, output_path: str,
 
     # 构造 prompt
     prompt = (
-        f"将第二张图的美甲款式精确应用到第一张手部照片的指甲上。"
-        f"保持手部皮肤质感、光影和角度不变，只替换指甲区域的颜色和图案。"
-        f"确保指甲形状与手部自然匹配，边缘平滑不溢出。"
-        f"保持原始图片的分辨率和真实感。"
+        f"把第一张图的手的指甲换成第二张手的美甲，其他保持不变，只修改第一张图的指甲"
     )
 
     payload = {
@@ -104,8 +101,7 @@ def generate_tryon(hand_path: str, style_path: str, output_path: str,
         },
         "parameters": {
             "n": 1,
-            "negative_prompt": "变形、扭曲、模糊、低质量、比例失调、颜色溢出",
-            "prompt_extend": False,
+            "prompt_extend": True,
             "watermark": False,
         }
     }
@@ -229,27 +225,43 @@ def main():
         lo, hi = int(parts[0]), int(parts[1]) if len(parts) > 1 else int(parts[0])
         pairs = [p for p in pairs if lo <= p[3] <= hi]
 
-    # 限制数量
-    if args.sample > 0:
-        pairs = pairs[:args.sample]
-
-    total = len(pairs)
-    print(f"🎯 本次将生成 {total} 张试戴效果图\n")
-
-    # --check 模式：仅统计
+    # --check 模式：仅统计当前的覆盖情况
     if args.check:
         exists = 0
         missing = 0
         for hand_path, style_path, hand_idx, style_id in pairs:
             result_name = f"hand_{hand_idx:02d}+style_{style_id:02d}.png"
-            if os.path.exists(str(RESULTS_DIR / result_name)):
+            result_path = RESULTS_DIR / result_name
+            # 判断有效文件（存在且不为空）
+            if result_path.exists() and result_path.stat().st_size > 1000:
                 exists += 1
             else:
                 missing += 1
         print(f"  已存在: {exists}")
         print(f"  待生成: {missing}")
-        print(f"  总计:   {total}")
+        print(f"  总计范围: {len(pairs)}")
         return
+
+    # 去重逻辑：剔除本地已生成的图片，避免被放入生图队列占用 --sample 名额
+    pending_pairs = []
+    for p in pairs:
+        hand_idx, style_id = p[2], p[3]
+        result_name = f"hand_{hand_idx:02d}+style_{style_id:02d}.png"
+        result_path = RESULTS_DIR / result_name
+        if result_path.exists() and result_path.stat().st_size > 1000:
+            continue
+        pending_pairs.append(p)
+    pairs = pending_pairs
+
+    # 限制数量
+    if args.sample > 0:
+        pairs = pairs[:args.sample]
+
+    total = len(pairs)
+    if total == 0:
+        print(f"🎯 指定范围内所有图片已生成完毕，无需重复生成！\n")
+        return
+    print(f"🎯 本次将实际生成 {total} 张试戴效果图\n")
 
     success = 0
     for i, (hand_path, style_path, hand_idx, style_id) in enumerate(pairs, 1):
