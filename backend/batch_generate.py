@@ -37,7 +37,7 @@ MODEL = "qwen-image-2.0-pro"
 
 STYLES_DIR = Path("static/styles")
 HANDS_DIR = Path("static/hands")
-RESULTS_DIR = Path("static/results")
+RESULTS_DIR = Path("results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ============================================================

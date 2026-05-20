@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Card, Upload, Button, Select, Spin, message, Empty, Typography } from 'antd';
+import { Card, Upload, Button, Select, Spin, message, Empty, Typography, Tooltip } from 'antd';
 import { UploadOutlined, ExperimentOutlined, CheckCircleOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { uploadHand, startTryOn, getStyles, getHandImages, HandInfo, NailStyleItem, TryOnResult } from '../services/api';
 
@@ -20,15 +20,10 @@ export default function TryOnPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [styleRes, hands] = await Promise.all([
-        getStyles({ size: 50 }),
-        getHandImages(),
-      ]);
+      const [styleRes, hands] = await Promise.all([getStyles({ size: 50 }), getHandImages()]);
       setStyles(styleRes.items);
       setHandImages(hands);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -41,12 +36,9 @@ export default function TryOnPage() {
       setHandPreview(res.image_url);
       setResult(null);
       message.success('上传成功！');
-      loadData(); // 刷新列表
-    } catch {
-      message.error('上传失败');
-    } finally {
-      setUploadLoading(false);
-    }
+      loadData();
+    } catch { message.error('上传失败'); }
+    finally { setUploadLoading(false); }
     return false;
   };
 
@@ -66,18 +58,12 @@ export default function TryOnPage() {
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 200);
     } catch (e: any) {
       message.error(e?.response?.data?.detail || '处理失败');
-    } finally {
-      setTryonLoading(false);
-    }
+    } finally { setTryonLoading(false); }
   };
 
   const handleReset = () => { setHandId(null); setHandPreview(null); setSelectedStyle(null); setResult(null); };
   const selectedStyleObj = styles.find(s => s.id === selectedStyle);
   const step = handPreview ? (result ? 3 : 2) : 1;
-
-  // 分组：用户上传 + 预设
-  const userHands = handImages.filter(h => h.type === 'user');
-  const presetHands = handImages.filter(h => h.type === 'preset');
 
   return (
     <div>
@@ -96,12 +82,12 @@ export default function TryOnPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        {/* Step 1: Hand image */}
-        <Card title="① 选择手部照片" style={{ flex: 1, minWidth: 300, maxWidth: 400 }}
+        {/* Step 1: Hand image — unified history */}
+        <Card title="① 选择手部照片" style={{ flex: 1, minWidth: 300, maxWidth: 420 }}
           extra={handPreview && <Button size="small" icon={<ReloadOutlined />} onClick={handleReset}>重选</Button>}>
           {/* Upload */}
           <Upload.Dragger accept="image/*" showUploadList={false} beforeUpload={handleUpload} disabled={uploadLoading}
-            style={{ padding: '10px 0', marginBottom: 12 }}>
+            style={{ padding: '10px 0', marginBottom: 14 }}>
             {uploadLoading ? <Spin /> : handPreview && handId?.startsWith('user_') ? (
               <img src={handPreview} alt="手图" style={{ maxHeight: 80, borderRadius: 8 }} />
             ) : (
@@ -109,46 +95,33 @@ export default function TryOnPage() {
             )}
           </Upload.Dragger>
 
-          {/* 历史上传记录 */}
-          {userHands.length > 0 && (
-            <>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 6 }}>
-                <HistoryOutlined style={{ marginRight: 4 }} />历史上传 ({userHands.length}张)
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                {userHands.map(h => (
-                  <div key={h.id} onClick={() => handleSelectHand(h)} style={{
-                    width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                    border: handId === h.id ? '3px solid #ff69b4' : '2px solid #eee',
-                    boxShadow: handId === h.id ? '0 0 0 2px rgba(255,105,180,0.2)' : 'none',
-                    transition: 'all 0.2s', position: 'relative',
-                  }}>
-                    <img src={h.url} alt={h.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 9, textAlign: 'center', padding: '1px 0' }}>
-                      {h.name}
-                    </div>
+          {/* 统一历史上传列表 */}
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 8 }}>
+            <HistoryOutlined style={{ marginRight: 4 }} />历史上传 ({handImages.length}张)
+          </div>
+          <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {handImages.map(h => (
+              <Tooltip key={h.id} title={h.name} placement="top">
+                <div onClick={() => handleSelectHand(h)} style={{
+                  width: 76, height: 76, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                  border: handId === h.id ? '3px solid #ff69b4' : '2px solid #eee',
+                  boxShadow: handId === h.id ? '0 0 0 2px rgba(255,105,180,0.2)' : 'none',
+                  transition: 'all 0.2s', position: 'relative',
+                  opacity: handId && handId !== h.id ? 0.65 : 1,
+                }}>
+                  <img src={h.url} alt={h.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, textAlign: 'center', padding: '2px 0', lineHeight: 1.1 }}>
+                    {h.type === 'user' ? h.name : h.name.replace('Hand ', '#')}
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* 示例手图 */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#999', marginBottom: 6 }}>示例手图 ({presetHands.length}张)</div>
-          <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {presetHands.map(h => (
-              <div key={h.id} onClick={() => handleSelectHand(h)} style={{
-                width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                border: handId === h.id ? '3px solid #ff69b4' : '2px solid #eee',
-                boxShadow: handId === h.id ? '0 0 0 2px rgba(255,105,180,0.2)' : 'none',
-                transition: 'all 0.2s', opacity: handId && handId !== h.id ? 0.7 : 1,
-              }}>
-                <img src={h.url} alt={h.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 9, textAlign: 'center', padding: '1px 0' }}>
-                  {h.name}
+                  {h.type === 'user' && (
+                    <div style={{ position: 'absolute', top: 3, right: 3, background: '#ff69b4', color: '#fff', fontSize: 8, borderRadius: 3, padding: '1px 4px' }}>NEW</div>
+                  )}
                 </div>
-              </div>
+              </Tooltip>
             ))}
+            {handImages.length === 0 && !loading && (
+              <div style={{ width: '100%', textAlign: 'center', padding: 20, color: '#ccc', fontSize: 13 }}>暂无手图记录</div>
+            )}
           </div>
         </Card>
 
@@ -191,7 +164,7 @@ export default function TryOnPage() {
           {tryonLoading ? (
             <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" />
               <p style={{ marginTop: 12, color: '#999' }}>百炼AI正在生成试戴效果...</p>
-              <Text type="secondary" style={{ fontSize: 11 }}>首次生成约5-10秒，之后缓存秒出</Text>
+              <Text type="secondary" style={{ fontSize: 11 }}>首次约5-10秒，缓存后秒出</Text>
             </div>
           ) : result ? (
             <div>

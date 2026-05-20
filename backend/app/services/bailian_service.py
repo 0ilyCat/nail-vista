@@ -99,7 +99,7 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
         return False, str(e)
 
 
-def find_cached_result(hand_name: str, style_id: int, results_dir: str) -> str | None:
+def find_cached_result(hand_name: str, style_id: int, results_dir: str = "results") -> str | None:
     """按命名规则查找已缓存的试戴结果"""
     result_name = f"{hand_name}+style_{style_id:02d}.png"
     result_path = os.path.join(results_dir, result_name)
