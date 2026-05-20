@@ -9,9 +9,13 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
 BASE_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
 MODEL = "qwen-image-2.0-pro"
+
+
+def _get_api_key() -> str:
+    from app.core.config import get_settings
+    return get_settings().DASHSCOPE_API_KEY
 
 
 def image_to_base64(filepath: str) -> str:
@@ -23,14 +27,10 @@ def image_to_base64(filepath: str) -> str:
 
 
 def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> tuple[bool, str]:
-    """
-    调用百炼 qwen-image-2.0-pro 图编辑API生成试戴效果图
-    
-    Returns:
-        (success: bool, message: str)
-    """
-    if not DASHSCOPE_API_KEY:
-        return False, "DASHSCOPE_API_KEY 未设置"
+    """调用百炼 qwen-image-2.0-pro 图编辑API生成试戴效果图"""
+    api_key = _get_api_key()
+    if not api_key:
+        return False, "DASHSCOPE_API_KEY 未配置（请在 .env 中设置）"
 
     if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
         return True, "已缓存"
@@ -41,12 +41,6 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
     except Exception as e:
         return False, f"图片编码失败: {e}"
 
-    prompt = (
-        "将第二张图的美甲款式精确应用到第一张手部照片的指甲上。"
-        "保持手部皮肤质感、光影和角度不变，只替换指甲区域的颜色和图案。"
-        "确保指甲形状与手部自然匹配，边缘平滑不溢出。保持原始图片的真实感。"
-    )
-
     payload = {
         "model": MODEL,
         "input": {
@@ -55,43 +49,29 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
                 "content": [
                     {"image": hand_b64},
                     {"image": style_b64},
-                    {"text": prompt},
+                    {"text": "将第二张图的美甲款式精确应用到第一张手部照片的指甲上。保持手部皮肤质感、光影和角度不变，只替换指甲区域的颜色和图案。确保指甲形状与手部自然匹配，边缘平滑不溢出。保持原始图片的真实感。"},
                 ]
             }]
         },
-        "parameters": {
-            "n": 1,
-            "negative_prompt": "变形、扭曲、模糊、低质量、比例失调、颜色溢出",
-            "prompt_extend": False,
-            "watermark": False,
-        }
-    }
-
-    headers = {
-        "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json",
+        "parameters": {"n": 1, "negative_prompt": "变形、扭曲、模糊、低质量、比例失调、颜色溢出", "prompt_extend": False, "watermark": False}
     }
 
     try:
-        resp = requests.post(BASE_URL, json=payload, headers=headers, timeout=120)
+        resp = requests.post(BASE_URL, json=payload, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=120)
         data = resp.json()
-
         if resp.status_code != 200 or "output" not in data:
-            err_msg = data.get("message", data.get("code", str(resp.status_code)))
-            logger.error(f"Bailian API error: {err_msg}")
-            return False, f"API错误: {err_msg}"
+            err = data.get("message", data.get("code", str(resp.status_code)))
+            logger.error(f"Bailian API error: {err}")
+            return False, f"API错误: {err}"
 
         image_url = data["output"]["choices"][0]["message"]["content"][0]["image"]
         img_resp = requests.get(image_url, timeout=60)
         img_resp.raise_for_status()
-
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "wb") as f:
             f.write(img_resp.content)
-
         logger.info(f"Bailian generated: {output_path} ({os.path.getsize(output_path)}B)")
         return True, "生成成功"
-
     except requests.exceptions.Timeout:
         return False, "请求超时"
     except Exception as e:
@@ -100,7 +80,6 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
 
 
 def find_cached_result(hand_name: str, style_id: int, results_dir: str = "results") -> str | None:
-    """按命名规则查找已缓存的试戴结果"""
     result_name = f"{hand_name}+style_{style_id:02d}.png"
     result_path = os.path.join(results_dir, result_name)
     if os.path.exists(result_path) and os.path.getsize(result_path) > 1000:

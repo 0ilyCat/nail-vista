@@ -6,10 +6,10 @@
   python batch_generate.py --sample 5          # 只生成 5 张示例
   python batch_generate.py --hands 1-3 --styles 1-5  # 指定范围
 
-生成的图片保存在 static/results/{hand_name}+{style_name}.png
+生成的图片保存在 results/{hand_name}+{style_name}.png
 
 API: 阿里百炼 qwen-image-2.0-pro 图编辑（多图融合）
-环境变量: DASHSCOPE_API_KEY
+配置: .env 中设置 DASHSCOPE_API_KEY
 """
 import os
 import sys
@@ -31,7 +31,9 @@ load_dotenv()
 # ============================================================
 # 配置
 # ============================================================
-DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+from app.core.config import get_settings
+settings = get_settings()
+DASHSCOPE_API_KEY = settings.DASHSCOPE_API_KEY
 BASE_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
 MODEL = "qwen-image-2.0-pro"
 

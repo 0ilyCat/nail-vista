@@ -2,7 +2,6 @@
 OpenClaw / MiMo AI 服务集成
 使用 OpenAI 兼容 API 调用 MiMo Token Plan
 """
-import os
 import logging
 from openai import OpenAI
 from app.core.config import get_settings
@@ -15,13 +14,12 @@ class MiMoAIService:
 
     def __init__(self):
         settings = get_settings()
-        api_key = settings.MIMO_API_KEY or os.environ.get("MIMO_API_KEY", "")
         self.client = OpenAI(
             base_url=settings.MIMO_BASE_URL,
-            api_key=api_key,
+            api_key=settings.MIMO_API_KEY,
         )
         self.model = settings.MIMO_MODEL
-        self.available = bool(api_key)
+        self.available = bool(settings.MIMO_API_KEY)
 
     async def chat(self, messages: list[dict], **kwargs) -> str:
         """调用 MiMo 模型对话"""

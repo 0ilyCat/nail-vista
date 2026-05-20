@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-import os
 
 
 class Settings(BaseSettings):
@@ -8,7 +7,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "美甲AI试戴与智能运营"
     DEBUG: bool = True
 
-    # Database — 默认 SQLite 开发，设置 USE_PG=1 走 PostgreSQL
+    # Database
     USE_POSTGRES: bool = False
     DATABASE_URL: str = ""
     PG_HOST: str = "localhost"
@@ -17,10 +16,13 @@ class Settings(BaseSettings):
     PG_PASSWORD: str = "postgres"
     PG_DB: str = "nail_tryon"
 
-    # MiMo API (OpenAI-compatible)
+    # MiMo API (OpenAI-compatible, from .env)
     MIMO_API_KEY: str = ""
     MIMO_BASE_URL: str = "https://token-plan-cn.xiaomimimo.com/v1"
     MIMO_MODEL: str = "mimo-v2.5"
+
+    # Bailian API (image generation, from .env)
+    DASHSCOPE_API_KEY: str = ""
 
     # MediaPipe
     MEDIAPIPE_MAX_HANDS: int = 1
@@ -34,7 +36,11 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:4180", "http://localhost:3000"]
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
@@ -49,5 +55,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    api_key = os.environ.get("MIMO_API_KEY", "")
-    return Settings(MIMO_API_KEY=api_key)
+    return Settings()
