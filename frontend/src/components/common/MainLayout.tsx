@@ -82,8 +82,8 @@ export default function MainLayout() {
           position: 'absolute', bottom: 16, left: 16, right: 16,
           padding: 12, background: '#fafafa', borderRadius: 8, fontSize: 12, color: '#999',
         }}>
-          <div style={{ marginBottom: 4, fontWeight: 600, color: '#666' }}>MiMo AI 驱动</div>
-          <div>mimo-v2.5 · Token Plan</div>
+          <div style={{ marginBottom: 4, fontWeight: 600, color: '#666' }}>LongCat AI 驱动</div>
+          <div>LongCat-2.0-Preview</div>
         </div>
       </Sider>
       <Layout>

@@ -16,10 +16,10 @@ class Settings(BaseSettings):
     PG_PASSWORD: str = "postgres"
     PG_DB: str = "nail_tryon"
 
-    # MiMo API (OpenAI-compatible, from .env)
-    MIMO_API_KEY: str = ""
-    MIMO_BASE_URL: str = "https://token-plan-cn.xiaomimimo.com/v1"
-    MIMO_MODEL: str = "mimo-v2.5"
+    # LongCat API (OpenAI-compatible, from .env)
+    LONGCAT_API_KEY: str = ""
+    LONGCAT_BASE_URL: str = "https://api.longcat.chat/openai"
+    LONGCAT_MODEL: str = "LongCat-2.0-Preview"
 
     # Bailian API (image generation, from .env)
     DASHSCOPE_API_KEY: str = ""

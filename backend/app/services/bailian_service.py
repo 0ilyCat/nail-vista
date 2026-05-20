@@ -41,6 +41,11 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
     except Exception as e:
         return False, f"图片编码失败: {e}"
 
+    # 构造 prompt
+    prompt = (
+        f"把第一张图的手的指甲换成第二张手的美甲，其他保持不变，只修改第一张图的指甲"
+    )
+
     payload = {
         "model": MODEL,
         "input": {
@@ -49,11 +54,15 @@ def generate_tryon_image(hand_path: str, style_path: str, output_path: str) -> t
                 "content": [
                     {"image": hand_b64},
                     {"image": style_b64},
-                    {"text": "将第二张图的美甲款式精确应用到第一张手部照片的指甲上。保持手部皮肤质感、光影和角度不变，只替换指甲区域的颜色和图案。确保指甲形状与手部自然匹配，边缘平滑不溢出。保持原始图片的真实感。"},
+                    {"text": prompt},
                 ]
             }]
         },
-        "parameters": {"n": 1, "negative_prompt": "变形、扭曲、模糊、低质量、比例失调、颜色溢出", "prompt_extend": False, "watermark": False}
+        "parameters": {
+            "n": 1,
+            "prompt_extend": True,
+            "watermark": False,
+        }
     }
 
     try:

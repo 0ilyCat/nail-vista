@@ -50,7 +50,7 @@ export default function HomePage() {
     },
     {
       title: '智能运营看板',
-      desc: '实时热度排行、7日趋势分析、AI运营助手。MiMo大模型驱动日报/策略生成。',
+      desc: '实时热度排行、7日趋势分析、AI运营助手。LongCat大模型驱动日报/策略生成。',
       icon: <DashboardOutlined style={{ fontSize: 40, color: '#1890ff' }} />,
       action: () => navigate('/dashboard'),
       color: '#e6f7ff',
@@ -69,13 +69,13 @@ export default function HomePage() {
           💅 美甲AI试戴与智能运营
         </h1>
         <p style={{ fontSize: 16, color: '#666', maxWidth: 600, margin: '0 auto 24px', lineHeight: 1.8 }}>
-          基于 MediaPipe + OpenCV 的虚拟试戴引擎，结合 MiMo 大模型的智能运营分析。
+          基于 MediaPipe + OpenCV 的虚拟试戴引擎，结合 LongCat 大模型的智能运营分析。
           让用户「所见即所得」，让运营「实时感知趋势」。
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Tag color="pink" style={{ fontSize: 13, padding: '4px 12px' }}>MediaPipe 手部检测</Tag>
           <Tag color="purple" style={{ fontSize: 13, padding: '4px 12px' }}>OpenCV 图像合成</Tag>
-          <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px' }}>MiMo V2.5 AI</Tag>
+          <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px' }}>LongCat-2.0-Preview</Tag>
           <Tag color="green" style={{ fontSize: 13, padding: '4px 12px' }}>FastAPI 后端</Tag>
           <Tag color="orange" style={{ fontSize: 13, padding: '4px 12px' }}>React 19 前端</Tag>
         </div>
@@ -117,7 +117,7 @@ export default function HomePage() {
           <Card className="stat-card">
             <Statistic
               title="AI引擎"
-              value="MiMo"
+              value="LongCat"
               suffix="V2.5"
               prefix={<RobotOutlined />}
             />

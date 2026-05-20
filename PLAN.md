@@ -8,7 +8,7 @@
 
 **核心约束**：
 - 美甲生图可用 Mock 数据，不需要实时调用图生模型
-- OpenClaw + MiMo Token Plan 作为 AI 引擎
+- OpenClaw + LongCat API 作为 AI 引擎
 - 基于提供的 25 款美甲 + 13 张手图脱敏数据进行开发
 
 ---
@@ -51,7 +51,7 @@
 │  ┌──────────┐  ┌──────────────┐  ┌───────────────────┐  │
 │  │ 试戴引擎  │  │ 运营分析引擎  │  │ OpenClaw 集成层   │  │
 │  │          │  │              │  │                   │  │
-│  │ MediaPipe│  │ 热度计算     │  │ MiMo Token Plan   │  │
+│  │ MediaPipe│  │ 热度计算     │  │ LongCat API   │  │
 │  │ OpenCV   │  │ 趋势识别     │  │ openclaw-sdk      │  │
 │  │ PIL      │  │ 策略生成     │  │ (Python client)   │  │
 │  └──────────┘  └──────────────┘  └───────────────────┘  │
@@ -102,7 +102,7 @@
 
 #### 4.2.3 OpenClaw AI 运营助手
 
-基于 MiMo Token Plan API (`https://token-plan-cn.xiaomimimo.com/v1`)
+基于 LongCat API API (`https://token-plan-cn.xiaomimimo.com/v1`)
 
 **能力清单**：
 1. **日报生成**：每日自动总结关键指标变化
@@ -113,7 +113,7 @@
 
 **集成方式**：
 ```python
-# 方式一：直接用 OpenAI SDK 调用 MiMo API
+# 方式一：直接用 OpenAI SDK 调用 OpenAI 兼容 API
 from openai import OpenAI
 client = OpenAI(
     base_url="https://token-plan-cn.xiaomimimo.com/v1",
@@ -122,7 +122,7 @@ client = OpenAI(
 
 # 方式二：OpenClaw SDK（需要安装 OpenClaw Gateway）
 npm install -g openclaw@latest
-openclaw onboard  # 配置 Xiaomi MiMo provider
+openclaw onboard  # 配置 LongCat provider
 pip install openclaw-sdk
 ```
 
@@ -303,7 +303,7 @@ meituan-hackathon/
 | ORM | SQLAlchemy 2.0 + asyncpg | 异步支持 |
 | 手部检测 | MediaPipe Hands | Google 开源，21点手部关键点 |
 | 图像处理 | OpenCV + Pillow | 透视变换、合成 |
-| AI 引擎 | OpenClaw + MiMo Token Plan | 运营智能分析 |
+| AI 引擎 | OpenClaw + LongCat API | 运营智能分析 |
 | 容器化 | Docker Compose | 一键部署 |
 
 ### 参考项目

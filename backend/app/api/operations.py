@@ -5,7 +5,7 @@ from sqlalchemy import select, func, desc
 from datetime import datetime, timedelta
 from app.core.database import get_db
 from app.models.models import OperationsReport, StyleMetrics, NailStyle
-from app.services.openclaw_service import mimo_service
+from app.services.openclaw_service import longcat_service
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def operations_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """与AI运营助手对话 — 调用MiMo"""
+    """与AI运营助手对话 — 调用LongCat"""
     # 构建上下文数据
     context = await _get_context(db)
     system_prompt = f"""你是美甲平台的AI运营助手。当前平台数据：
@@ -35,7 +35,7 @@ async def operations_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": req.message},
     ]
-    reply = await mimo_service.chat(messages)
+    reply = await longcat_service.chat(messages)
     return ChatResponse(reply=reply)
 
 
@@ -89,20 +89,20 @@ async def generate_report(
     report_type: str = "daily",
     db: AsyncSession = Depends(get_db),
 ):
-    """调用MiMo生成运营报告"""
+    """调用LongCat生成运营报告"""
     context = await _get_context(db)
     report_content = ""
     report_metrics = {}
 
     if report_type == "daily":
-        report_content = await mimo_service.generate_daily_report(context)
+        report_content = await longcat_service.generate_daily_report(context)
         report_metrics = context
     elif report_type == "trend":
         trend_data = await _get_trend_data(db)
-        report_content = await mimo_service.analyze_trends(trend_data)
+        report_content = await longcat_service.analyze_trends(trend_data)
         report_metrics = {"trend_data": trend_data}
     elif report_type == "strategy":
-        report_content = await mimo_service.generate_strategy(context)
+        report_content = await longcat_service.generate_strategy(context)
         report_metrics = context
     else:
         raise HTTPException(400, f"不支持的报告类型: {report_type}")
