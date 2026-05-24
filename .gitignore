@@ -15,6 +15,10 @@ backend/static/
 # OpenClaw runtime state (configs & skills are committed, state is not)
 openclaw/agents/*/state/
 
+# OpenClaw config with API keys (仅 .example 模板提交)
+openclaw/openclaw.json
+openclaw/openclaw.json.last-good
+
 # Build output artifacts
 output/node_modules/
 output/package.json
