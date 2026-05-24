@@ -19,10 +19,6 @@ openclaw/agents/*/state/
 openclaw/openclaw.json
 openclaw/openclaw.json.last-good
 
-# Build output artifacts
-output/node_modules/
-output/package.json
-output/package-lock.json
-output/gen-ppt.js
-output/*.png
+# Build output artifacts (PPT/Report/screenshots — not versioned)
+output/
 .playwright-cli/
