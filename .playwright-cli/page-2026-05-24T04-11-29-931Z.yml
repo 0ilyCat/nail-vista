@@ -1,0 +1,42 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: NailVista
+    - navigation [ref=e6]:
+      - button "appstore 款式浏览" [ref=e7] [cursor=pointer]:
+        - img "appstore" [ref=e9]:
+          - img [ref=e10]
+        - generic [ref=e12]: 款式浏览
+      - button "experiment AI 试戴" [ref=e13] [cursor=pointer]:
+        - img "experiment" [ref=e15]:
+          - img [ref=e16]
+        - generic [ref=e18]: AI 试戴
+      - button "message 对话小美" [ref=e19] [cursor=pointer]:
+        - img "message" [ref=e21]:
+          - img [ref=e22]
+        - generic [ref=e24]: 对话小美
+      - button "dashboard 运营看板" [ref=e26] [cursor=pointer]:
+        - img "dashboard" [ref=e28]:
+          - img [ref=e29]
+        - generic [ref=e31]: 运营看板
+      - button "home 首页" [ref=e32] [cursor=pointer]:
+        - img "home" [ref=e34]:
+          - img [ref=e35]
+        - generic [ref=e37]: 首页
+  - main [ref=e38]:
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e44]: 小美
+        - generic [ref=e45]:
+          - text: AI 时尚顾问
+          - text: 帮你发现最适合的美甲
+        - button "experiment AI 试戴" [ref=e46] [cursor=pointer]:
+          - img "experiment" [ref=e48]:
+            - img [ref=e49]
+          - generic [ref=e51]: AI 试戴
+      - generic [ref=e53]:
+        - paragraph [ref=e57]: 嗨！我是小美 💅 你的 AI 时尚顾问。可以帮你：\n\n✨ 搜索和推荐美甲款式\n📸 评价试戴效果图\n💡 解答美甲搭配问题\n\n试试问我「有没有适合夏天的法式美甲？」
+        - generic [ref=e58]:
+          - textbox "问问小美吧，比如「推荐一款适合约会的美甲」..." [ref=e59]
+          - button "send" [disabled] [ref=e60]:
+            - img "send" [ref=e61]:
+              - img [ref=e62]

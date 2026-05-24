@@ -326,6 +326,13 @@ body {
   border: 1px solid var(--border);
   background: var(--surface);
 }
+
+/* Full-height chat in dashboard */
+.dashboard-chat-card .chat-container {
+  height: 100%;
+  border-radius: 0;
+  border: none;
+}
 .chat-header {
   padding: var(--space-md);
   border-bottom: 1px solid var(--border-light);
@@ -749,11 +756,12 @@ body {
    Floating "Ask Xiaomei" Button
    ============================================ */
 @keyframes blobMorph {
-  0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-  25%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-  50%  { border-radius: 50% 50% 40% 60% / 40% 40% 60% 60%; }
-  75%  { border-radius: 40% 60% 50% 50% / 70% 50% 30% 50%; }
-  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+  20%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.08); }
+  40%  { border-radius: 50% 50% 40% 60% / 40% 40% 60% 60%; transform: scale(1.03); }
+  60%  { border-radius: 40% 60% 50% 50% / 70% 50% 30% 50%; transform: scale(1.06); }
+  80%  { border-radius: 35% 50% 60% 45% / 55% 40% 50% 45%; transform: scale(1.02); }
+  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
 }
 
 @keyframes blobColorShift {
@@ -809,7 +817,6 @@ body {
     blobGlowPulse 3s var(--ease-out-quart) infinite;
   flex-shrink: 0;
   position: relative;
-  filter: blur(0.5px);
 }
 
 .morphing-blob::after {
@@ -1091,6 +1098,7 @@ body {
   padding: var(--space-xl);
   border-radius: var(--radius-xl);
   position: relative;
+  overflow: visible;
 }
 
 .chat-page-sidebar-bg {
@@ -1113,7 +1121,6 @@ body {
   position: relative;
   z-index: 1;
   margin-bottom: var(--space-md);
-  filter: blur(1px);
 }
 
 .chat-page-blob::after {
@@ -1159,33 +1166,138 @@ body {
 /* ============================================
    Dashboard Compact Styles
    ============================================ */
-.dashboard-trend-card {
-  margin-bottom: 16px;
+
+/* Main 2-column layout */
+.dashboard-main-layout {
+  display: flex;
+  gap: var(--space-md);
+  height: calc(100vh - 130px);
+  min-height: 600px;
 }
 
-.dashboard-trend-card .recharts-wrapper {
-  max-height: 200px;
-}
-
-.dashboard-ranking-table {
-  max-height: 480px;
+.dashboard-left-panel {
+  width: 42%;
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   overflow-y: auto;
 }
 
-.dashboard-lower-row {
-  display: flex;
-  gap: var(--space-md);
-  align-items: flex-start;
-}
-
-.dashboard-lower-row .ranking-col {
+.dashboard-chat-panel {
   flex: 1;
-  min-width: 0;
+  min-width: 380px;
+  display: flex;
+  flex-direction: column;
 }
 
-.dashboard-lower-row .chat-col {
-  width: 360px;
+.dashboard-chat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-chat-card > .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-chat-card .chat-widget {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Stats row — ultra compact */
+.dashboard-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.stat-card-compact {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  padding: 10px 12px;
+  transition: box-shadow var(--duration-base) var(--ease-out-quart);
+}
+
+.stat-card-compact:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card-compact::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.stat-card-compact .ant-statistic-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.stat-card-compact .ant-statistic-content {
+  font-weight: 600;
+}
+
+/* Trend chart */
+.dashboard-trend-card {
   flex-shrink: 0;
+}
+
+.dashboard-trend-card .recharts-wrapper {
+  max-height: 150px;
+}
+
+/* Ranking table */
+.dashboard-ranking-table {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.dashboard-ranking-table .ant-table-thead > tr > th {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+.dashboard-ranking-table .ant-table-tbody > tr > td {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+/* Quick actions */
+.dashboard-quick-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* Responsive: stack on small screens */
+@media (max-width: 900px) {
+  .dashboard-main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  .dashboard-left-panel {
+    width: 100%;
+    min-width: 0;
+  }
+  .dashboard-chat-panel {
+    min-width: 0;
+    min-height: 500px;
+  }
 }
 
 /* Stat card with gradient top line */
@@ -1228,7 +1340,228 @@ body {
 /* ============================================
    Preview area with gradient border
    ============================================ */
-.preview-area-gradient {
+/* ============================================
+   Compact TryOn Layout (sidebar + 3 panels)
+   ============================================ */
+.tryon-compact {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--space-md);
+  align-items: start;
+  max-height: calc(100vh - 56px - var(--space-xl) * 2);
+}
+
+/* Sidebar */
+.tryon-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tryon-slim-upload {
+  padding: 6px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.tryon-slim-upload .ant-upload-drag-container {
+  padding: 0;
+}
+
+.tryon-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tryon-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  max-height: calc(50vh - 80px);
+}
+
+.tryon-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s var(--ease-out-quart);
+  position: relative;
+  flex-shrink: 0;
+  background: var(--bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tryon-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tryon-thumb:hover {
+  border-color: var(--primary-light);
+  transform: scale(1.02);
+}
+
+.tryon-thumb.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.tryon-thumb-check {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: var(--primary);
+  color: white;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  box-shadow: 0 2px 4px var(--primary-glow);
+}
+
+.tryon-style-select {
+  width: 100% !important;
+  flex-shrink: 0;
+}
+
+.tryon-style-select .ant-select-selector {
+  font-size: 12px !important;
+  height: 30px !important;
+}
+
+/* Main panels area */
+.tryon-main-panels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  align-content: start;
+}
+
+.tryon-panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.tryon-panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.tryon-image-box {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border);
+  transition: all var(--duration-base) var(--ease-out-quart);
+}
+
+.tryon-image-box.has-image {
+  border: 2px solid var(--border-light);
+  background: #000;
+}
+
+.tryon-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tryon-image-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.tryon-style-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+
+.tryon-generating-compact {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+/* CTA gradient button */
+.tryon-cta-gradient {
+  position: relative;
+  border: none !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  height: 40px !important;
+  background: linear-gradient(135deg, var(--primary), oklch(45% 0.18 320), var(--accent));
+  background-size: 200% 200%;
+  animation: gradientBorder 3s var(--ease-out-quart) infinite;
+  color: white !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 2px 12px var(--primary-glow), 0 0 0 2px var(--primary-glow) !important;
+  transition: all 0.3s var(--ease-out-expo) !important;
+}
+
+.tryon-cta-gradient:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px oklch(52% 0.13 12 / 0.35), 0 0 0 3px oklch(52% 0.13 12 / 0.3) !important;
+}
+
+.tryon-cta-gradient:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Gradient button — reusable */
+.btn-gradient {
+  position: relative;
+  border: none !important;
+  background: linear-gradient(135deg, var(--primary), oklch(45% 0.18 320), var(--accent));
+  background-size: 200% 200%;
+  animation: gradientBorder 4s var(--ease-out-quart) infinite;
+  color: white !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 10px var(--primary-glow), 0 0 0 1px var(--primary-glow) !important;
+  transition: all 0.3s var(--ease-out-expo) !important;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px oklch(52% 0.13 12 / 0.35), 0 0 0 3px oklch(52% 0.13 12 / 0.3) !important;
+}
   width: 100%;
   aspect-ratio: 1;
   border-radius: var(--radius-lg);
@@ -1272,7 +1605,7 @@ body {
 .preview-area-gradient img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   position: relative;
   z-index: 1;
 }
@@ -1326,13 +1659,5 @@ body {
 
   .chat-page-main {
     min-height: 60vh;
-  }
-
-  .dashboard-lower-row {
-    flex-direction: column;
-  }
-
-  .dashboard-lower-row .chat-col {
-    width: 100%;
   }
 }

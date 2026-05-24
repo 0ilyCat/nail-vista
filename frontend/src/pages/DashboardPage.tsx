@@ -1,8 +1,7 @@
-import { Card, Row, Col, Statistic, Table, Button, Tag, Spin, message } from 'antd';
+import { Card, Statistic, Table, Button, Tag, Spin, message } from 'antd';
 import {
   ArrowUpOutlined, ArrowDownOutlined, RobotOutlined,
-  ReloadOutlined, FileTextOutlined, ThunderboltOutlined,
-  FireOutlined, BarChartOutlined,
+  ReloadOutlined, 
 } from '@ant-design/icons';
 import { useEffect, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -44,133 +43,127 @@ export default function DashboardPage() {
     <Spin spinning={loading}>
       <h1 style={{
         fontFamily: 'var(--font-display)',
-        fontSize: 'var(--text-xl)',
+        fontSize: 'var(--text-lg)',
         fontWeight: 600,
-        marginBottom: 'var(--space-lg)',
+        marginBottom: 12,
         color: 'var(--text)',
       }}>
         运营看板
       </h1>
 
-      {/* Stats row — with gradient top accent */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6}>
-          <div className="stat-card-gradient" style={{ background: 'var(--surface)', padding: '16px 20px' }}>
-            <Statistic title="款式总数" value={overview?.total_styles ?? '-'} suffix="款" />
-          </div>
-        </Col>
-        <Col xs={12} sm={6}>
-          <div className="stat-card-gradient" style={{ background: 'var(--surface)', padding: '16px 20px' }}>
-            <Statistic
-              title="今日试戴" value={overview?.today_tryons ?? '-'} suffix="次"
-              prefix={overview?.tryon_change_pct > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-              valueStyle={{ color: (overview?.tryon_change_pct ?? 0) >= 0 ? '#3f8600' : '#cf1322' }}
-            />
-          </div>
-        </Col>
-        <Col xs={12} sm={6}>
-          <div className="stat-card-gradient" style={{ background: 'var(--surface)', padding: '16px 20px' }}>
-            <Statistic title="今日浏览" value={overview?.today_views ?? '-'} suffix="次" />
-          </div>
-        </Col>
-        <Col xs={12} sm={6}>
-          <div className="stat-card-gradient" style={{ background: 'var(--surface)', padding: '16px 20px' }}>
-            <Statistic title="累计试戴" value={overview?.total_tryons ?? '-'} suffix="次" />
-          </div>
-        </Col>
-      </Row>
-
-      {/* Trend Chart — compact */}
-      <Card
-        className="dashboard-trend-card gradient-border-subtle"
-        title={<span style={{ fontWeight: 600 }}>📈 7 日趋势</span>}
-        extra={<Button icon={<ReloadOutlined />} onClick={loadData} size="small">刷新</Button>}
-      >
-        {trends.length > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={trends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 8,
-                  border: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                }}
+      <div className="dashboard-main-layout">
+        {/* ── Left panel: compact stats + chart + ranking ── */}
+        <div className="dashboard-left-panel">
+          {/* Stats row — ultra compact */}
+          <div className="dashboard-stats-row">
+            <div className="stat-card-compact">
+              <Statistic title="款式" value={overview?.total_styles ?? '-'} valueStyle={{ fontSize: 22 }} />
+            </div>
+            <div className="stat-card-compact">
+              <Statistic
+                title="今日试戴" value={overview?.today_tryons ?? '-'}
+                prefix={(overview?.tryon_change_pct ?? 0) > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                valueStyle={{ fontSize: 22, color: (overview?.tryon_change_pct ?? 0) >= 0 ? '#3f8600' : '#cf1322' }}
               />
-              <Line type="monotone" dataKey="views" stroke="#8884d8" name="浏览" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="tryons" stroke="#c0395c" name="试戴" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="favorites" stroke="#82ca9d" name="收藏" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="skeleton" style={{ width: 400, height: 160 }} />
+            </div>
+            <div className="stat-card-compact">
+              <Statistic title="今日营收" value={overview?.today_revenue != null ? `¥${overview.today_revenue}` : '-'} valueStyle={{ fontSize: 22 }} />
+            </div>
+            <div className="stat-card-compact">
+              <Statistic
+                title="评分" value={overview?.avg_rating ?? '-'} suffix="⭐"
+                valueStyle={{ fontSize: 22 }}
+              />
+            </div>
           </div>
-        )}
-      </Card>
 
-      {/* Lower section: Ranking + Chat side by side */}
-      <div className="dashboard-lower-row">
-        {/* Hot Ranking Table */}
-        <div className="ranking-col">
+          {/* Trend chart — compact */}
+          <Card
+            className="dashboard-trend-card gradient-border-subtle"
+            size="small"
+            title={<span style={{ fontWeight: 600, fontSize: 13 }}>📈 7 日趋势</span>}
+            extra={<Button icon={<ReloadOutlined />} onClick={loadData} size="small" />}
+            bodyStyle={{ padding: '8px 12px' }}
+          >
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={trends}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} width={32} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
+                <Line type="monotone" dataKey="tryons" stroke="#c0395c" name="试戴" strokeWidth={2} dot={{ r: 2 }} />
+                <Line type="monotone" dataKey="views" stroke="#8884d8" name="浏览" strokeWidth={1.5} dot={false} />
+                <Line type="monotone" dataKey="orders" stroke="#27ae60" name="订单" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Hot ranking — compact table */}
           <Card
             className="gradient-border-subtle"
-            title={<span style={{ fontWeight: 600 }}>🔥 热门款式排行 (7天)</span>}
+            size="small"
+            title={<span style={{ fontWeight: 600, fontSize: 13 }}>🔥 热门款式 TOP10</span>}
+            bodyStyle={{ padding: 0 }}
           >
             <div className="dashboard-ranking-table">
               <Table
                 dataSource={hotStyles}
                 rowKey="style_id"
+                size="small"
                 columns={[
-                  {
-                    title: '#', dataIndex: 'rank', width: 50,
+                  { title: '#', dataIndex: 'rank', width: 38,
                     render: (r: number) => (
-                      <Tag color={r <= 3 ? 'pink' : 'default'} style={{ borderRadius: 10, minWidth: 28, textAlign: 'center' }}>
+                      <Tag color={r <= 3 ? 'pink' : 'default'} style={{ borderRadius: 8, minWidth: 22, textAlign: 'center', padding: '0 4px', fontSize: 11, lineHeight: '18px' }}>
                         {r}
                       </Tag>
                     ),
                   },
-                  { title: '款式', dataIndex: 'name', render: (n: string) => <strong>{n}</strong> },
-                  { title: '分类', dataIndex: 'category', render: (c: string) => <Tag>{c}</Tag> },
-                  { title: '试戴', dataIndex: 'tryons', sorter: (a: any, b: any) => a.tryons - b.tryons },
-                  {
-                    title: '热度分', dataIndex: 'hot_score',
-                    render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{v}</span>,
-                    sorter: (a: any, b: any) => a.hot_score - b.hot_score,
+                  { title: '款式', dataIndex: 'name', width: 90, ellipsis: true,
+                    render: (n: string) => <span style={{ fontSize: 12, fontWeight: 500 }}>{n}</span> },
+                  { title: '分类', dataIndex: 'category', width: 60,
+                    render: (c: string) => <Tag style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>{c}</Tag> },
+                  { title: '试戴', dataIndex: 'tryons', width: 52, align: 'right' as const },
+                  { title: '订单', dataIndex: 'orders', width: 52, align: 'right' as const,
+                    render: (v: number) => v || 0 },
+                  { title: '热度', dataIndex: 'hot_score', width: 52, align: 'right' as const,
+                    render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary)', fontSize: 12 }}>{v}</span>,
                   },
-                  {
-                    title: '变化', dataIndex: 'change_pct', width: 80,
+                  { title: '变化', dataIndex: 'change_pct', width: 60,
                     render: (v: number) => v > 0
-                      ? <Tag color="success">↑{v}%</Tag>
-                      : <Tag color="error">↓{Math.abs(v)}%</Tag>,
+                      ? <Tag color="success" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↑{v}%</Tag>
+                      : <Tag color="error" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↓{Math.abs(v)}%</Tag>,
                   },
                 ]}
                 pagination={false}
-                size="middle"
                 locale={{ emptyText: '暂无排行数据' }}
               />
             </div>
           </Card>
+
+          {/* Quick actions */}
+          <div className="dashboard-quick-actions">
+            {quickActions.map((a) => (
+              <Button key={a.label} size="small" style={{ fontSize: 11 }}>{a.label}</Button>
+            ))}
+          </div>
         </div>
 
-        {/* AI Operations Assistant */}
-        <div className="chat-col">
+        {/* ── Right panel: full-height AI chat ── */}
+        <div className="dashboard-chat-panel">
           <Card
-            className="gradient-border-subtle"
+            className="gradient-border-subtle dashboard-chat-card"
             title={
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}>
                 <RobotOutlined style={{ color: 'var(--accent)' }} />
                 AI 运营助手
               </span>
             }
-            bodyStyle={{ padding: 0 }}
+            bodyStyle={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
           >
             <ChatWidget
               agentType="dashboard"
               placeholder="试试「今日概览」或「热门排行」..."
-              welcomeMessage="你好！我是 AI 运营助手 📊\n\n可以帮你：\n• 查询运营概览数据\n• 分析趋势变化\n• 生成运营报告\n• 配置定时任务\n\n试试问我「今天的数据怎么样？」"
+              welcomeMessage="你好！我是 AI 运营助手 📊\n\n可以帮你：\n• 查询运营概览数据\n• 分析趋势变化\n• 生成运营报告\n\n试试问我「今天生意怎么样」？"
               quickActions={quickActions}
             />
           </Card>

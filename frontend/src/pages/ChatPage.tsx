@@ -1,6 +1,11 @@
+import { useNavigate } from 'react-router-dom';
+import { Button } from 'antd';
+import { ExperimentOutlined } from '@ant-design/icons';
 import ChatWidget from '../components/chat/ChatWidget';
 
 export default function ChatPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="chat-page-layout">
       {/* 左侧：小美形象区域 */}
@@ -12,6 +17,14 @@ export default function ChatPage() {
           AI 时尚顾问<br />
           帮你发现最适合的美甲
         </div>
+        <Button
+          className="btn-gradient"
+          icon={<ExperimentOutlined />}
+          onClick={() => navigate('/user/tryon')}
+          style={{ marginTop: 16, width: '100%', borderRadius: 20, height: 36 }}
+        >
+          AI 试戴
+        </Button>
       </div>
 
       {/* 右侧：全屏对话 */}

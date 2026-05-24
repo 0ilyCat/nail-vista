@@ -126,7 +126,7 @@ export default function TryOnPage() {
             <HistoryOutlined style={{ marginRight: 4 }} />
             历史记录 ({handImages.length})
           </div>
-          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ maxHeight: 120, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {handImages.map(h => (
               <Tooltip key={h.id} title={h.name} placement="top">
                 <div onClick={() => handleSelectHand(h)} style={{
@@ -187,7 +187,7 @@ export default function TryOnPage() {
             loading={loading}
           />
 
-          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ maxHeight: 120, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {styles.map(s => (
               <div key={s.id} onClick={() => setSelectedStyle(s.id)}
                 className={`nail-swatch ${selectedStyle === s.id ? 'selected' : ''}`}

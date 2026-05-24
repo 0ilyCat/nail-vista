@@ -1,0 +1,137 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: NailVista
+    - navigation [ref=e6]:
+      - button "appstore 款式浏览" [ref=e7] [cursor=pointer]:
+        - img "appstore" [ref=e9]:
+          - img [ref=e10]
+        - generic [ref=e12]: 款式浏览
+      - button "experiment AI 试戴" [ref=e13] [cursor=pointer]:
+        - img "experiment" [ref=e15]:
+          - img [ref=e16]
+        - generic [ref=e18]: AI 试戴
+      - button "message 对话小美" [ref=e19] [cursor=pointer]:
+        - img "message" [ref=e21]:
+          - img [ref=e22]
+        - generic [ref=e24]: 对话小美
+      - button "dashboard 运营看板" [ref=e26] [cursor=pointer]:
+        - img "dashboard" [ref=e28]:
+          - img [ref=e29]
+        - generic [ref=e31]: 运营看板
+      - button "home 首页" [ref=e32] [cursor=pointer]:
+        - img "home" [ref=e34]:
+          - img [ref=e35]
+        - generic [ref=e37]: 首页
+  - main [ref=e38]:
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - button "upload 上传手图" [ref=e45] [cursor=pointer]:
+            - generic [ref=e47]:
+              - img "upload" [ref=e48]:
+                - img [ref=e49]
+              - generic [ref=e51]: 上传手图
+          - generic [ref=e52]:
+            - img "history" [ref=e53]:
+              - img [ref=e54]
+            - text: 历史记录 (15)
+          - generic [ref=e56]:
+            - img "上传 05-20 11:42" [ref=e58] [cursor=pointer]
+            - img "上传 05-20 11:22" [ref=e60] [cursor=pointer]
+            - img "Hand 01" [ref=e62] [cursor=pointer]
+            - img "Hand 02" [ref=e64] [cursor=pointer]
+            - img "Hand 03" [ref=e66] [cursor=pointer]
+            - img "Hand 04" [ref=e68] [cursor=pointer]
+            - img "Hand 05" [ref=e70] [cursor=pointer]
+            - img "Hand 06" [ref=e72] [cursor=pointer]
+            - img "Hand 07" [ref=e74] [cursor=pointer]
+            - img "Hand 08" [ref=e76] [cursor=pointer]
+            - img "Hand 09" [ref=e78] [cursor=pointer]
+            - img "Hand 10" [ref=e80] [cursor=pointer]
+            - img "Hand 11" [ref=e82] [cursor=pointer]
+            - img "Hand 12" [ref=e84] [cursor=pointer]
+            - img "Hand 13" [ref=e86] [cursor=pointer]
+          - generic [ref=e87]: 选择款式
+          - generic [ref=e88] [cursor=pointer]:
+            - generic [ref=e90]:
+              - combobox [ref=e92]
+              - generic: 搜索...
+            - generic:
+              - img:
+                - img
+          - generic [ref=e93]:
+            - generic "法式简约" [ref=e94] [cursor=pointer]:
+              - img "法式简约" [ref=e95]
+            - generic "星空渐变" [ref=e96] [cursor=pointer]:
+              - img "星空渐变" [ref=e97]
+            - generic "樱花粉" [ref=e98] [cursor=pointer]:
+              - img "樱花粉" [ref=e99]
+            - generic "经典红" [ref=e100] [cursor=pointer]:
+              - img "经典红" [ref=e101]
+            - generic "裸色优雅" [ref=e102] [cursor=pointer]:
+              - img "裸色优雅" [ref=e103]
+            - generic "闪钻奢华" [ref=e104] [cursor=pointer]:
+              - img "闪钻奢华" [ref=e105]
+            - generic "莫兰迪绿" [ref=e106] [cursor=pointer]:
+              - img "莫兰迪绿" [ref=e107]
+            - generic "雾霾蓝" [ref=e108] [cursor=pointer]:
+              - img "雾霾蓝" [ref=e109]
+            - generic "焦糖棕" [ref=e110] [cursor=pointer]:
+              - img "焦糖棕" [ref=e111]
+            - generic "玫瑰金" [ref=e112] [cursor=pointer]:
+              - img "玫瑰金" [ref=e113]
+            - generic "大理石纹理" [ref=e114] [cursor=pointer]:
+              - img "大理石纹理" [ref=e115]
+            - generic "奶油白" [ref=e116] [cursor=pointer]:
+              - img "奶油白" [ref=e117]
+            - generic "薰衣草紫" [ref=e118] [cursor=pointer]:
+              - img "薰衣草紫" [ref=e119]
+            - generic "蜜桃橘" [ref=e120] [cursor=pointer]:
+              - img "蜜桃橘" [ref=e121]
+            - generic "薄荷绿" [ref=e122] [cursor=pointer]:
+              - img "薄荷绿" [ref=e123]
+            - generic "深海蓝" [ref=e124] [cursor=pointer]:
+              - img "深海蓝" [ref=e125]
+            - generic "酒红丝绒" [ref=e126] [cursor=pointer]:
+              - img "酒红丝绒" [ref=e127]
+            - generic "豆沙粉" [ref=e128] [cursor=pointer]:
+              - img "豆沙粉" [ref=e129]
+            - generic "香槟金" [ref=e130] [cursor=pointer]:
+              - img "香槟金" [ref=e131]
+            - generic "银河流星" [ref=e132] [cursor=pointer]:
+              - img "银河流星" [ref=e133]
+            - generic "暗黑系" [ref=e134] [cursor=pointer]:
+              - img "暗黑系" [ref=e135]
+            - generic "马卡龙" [ref=e136] [cursor=pointer]:
+              - img "马卡龙" [ref=e137]
+            - generic "蜜糖裸" [ref=e138] [cursor=pointer]:
+              - img "蜜糖裸" [ref=e139]
+            - generic "彩虹渐变" [ref=e140] [cursor=pointer]:
+              - img "彩虹渐变" [ref=e141]
+            - generic "珍珠白" [ref=e142] [cursor=pointer]:
+              - img "珍珠白" [ref=e143]
+        - generic [ref=e144]:
+          - generic [ref=e145]:
+            - generic [ref=e146]: ① 手部照片
+            - generic [ref=e148]:
+              - img "upload" [ref=e149]:
+                - img [ref=e150]
+              - text: 上传手图
+          - generic [ref=e152]:
+            - generic [ref=e153]: ② 美甲款式
+            - generic [ref=e155]:
+              - img "experiment" [ref=e156]:
+                - img [ref=e157]
+              - text: 选择款式
+          - generic [ref=e159]:
+            - generic [ref=e160]: ③ 试戴效果
+            - generic [ref=e162]:
+              - img "暂无数据" [ref=e164]
+              - generic [ref=e170]: 选择手图和款式
+          - button "experiment 请选择手图和款式" [disabled] [ref=e172]:
+            - generic:
+              - img "experiment":
+                - img
+            - generic: 请选择手图和款式
+      - button "问问小美" [ref=e173] [cursor=pointer]:
+        - generic [ref=e175]: 问问小美
