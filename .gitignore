@@ -11,3 +11,6 @@ results/
 *.db
 test_setup.py
 backend/static/
+
+# OpenClaw runtime state (configs & skills are committed, state is not)
+openclaw/agents/*/state/

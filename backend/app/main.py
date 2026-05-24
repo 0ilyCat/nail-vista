@@ -48,9 +48,11 @@ async def health():
     return {"status": "ok", "app": settings.APP_NAME, "db": db_type}
 
 
-from app.api import tryon, styles, analytics, operations  # noqa: E402
+from app.api import tryon, styles, analytics, operations, chat  # noqa: E402
+from app.models import chat as _chat_models  # noqa: E402 — ensure tables created
 
 app.include_router(tryon.router, prefix="/api/tryon", tags=["AI试戴"])
 app.include_router(styles.router, prefix="/api/styles", tags=["款式管理"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["数据分析"])
 app.include_router(operations.router, prefix="/api/operations", tags=["智能运营"])
+app.include_router(chat.router, prefix="/api/chat", tags=["AI对话"])

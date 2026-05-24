@@ -1,0 +1,78 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "xiaomi-coding": {
+        "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
+        "api": "openai-completions",
+        "apiKey": "YOUR_TOKEN_PLAN_KEY_HERE",
+        "models": [
+          {
+            "id": "mimo-v2.5-pro",
+            "name": "MiMo V2.5 Pro",
+            "reasoning": true,
+            "input": ["text"],
+            "contextWindow": 1048576,
+            "maxTokens": 32000
+          },
+          {
+            "id": "mimo-v2.5",
+            "name": "MiMo V2.5",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "contextWindow": 262144,
+            "maxTokens": 32000
+          },
+          {
+            "id": "mimo-v2-omni",
+            "name": "MiMo V2 Omni",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "contextWindow": 262144,
+            "maxTokens": 32000
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "port": 18789,
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "nailvista-dev-token"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "xiaomi-coding/mimo-v2.5-pro"
+      },
+      "models": {
+        "xiaomi-coding/mimo-v2.5": { "alias": "MiMo V2.5" },
+        "xiaomi-coding/mimo-v2.5-pro": { "alias": "MiMo V2.5 Pro" },
+        "xiaomi-coding/mimo-v2-omni": { "alias": "MiMo V2 Omni" }
+      }
+    },
+    "list": [
+      {
+        "id": "nailvista-xiaomei",
+        "name": "小美",
+        "workspace": "openclaw/agents/xiaomei",
+        "agentDir": "openclaw/agents/xiaomei/state"
+      },
+      {
+        "id": "nailvista-ops",
+        "name": "运营助手",
+        "workspace": "openclaw/agents/ops",
+        "agentDir": "openclaw/agents/ops/state"
+      }
+    ]
+  }
+}

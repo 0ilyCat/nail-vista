@@ -1,16 +1,23 @@
 import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Upload, Button, Select, Spin, message, Empty, Typography, Tooltip } from 'antd';
-import { UploadOutlined, ExperimentOutlined, CheckCircleOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { UploadOutlined, ExperimentOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { uploadHand, startTryOn, getStyles, getHandImages, HandInfo, NailStyleItem, TryOnResult } from '../services/api';
+import FloatingAskButton from '../components/common/FloatingAskButton';
 
 const { Text } = Typography;
 
 export default function TryOnPage() {
+  const [searchParams] = useSearchParams();
+  const preselectedStyleId = searchParams.get('styleId');
+
   const [styles, setStyles] = useState<NailStyleItem[]>([]);
   const [handImages, setHandImages] = useState<HandInfo[]>([]);
   const [handId, setHandId] = useState<string | null>(null);
   const [handPreview, setHandPreview] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<number | null>(
+    preselectedStyleId ? Number(preselectedStyleId) : null
+  );
   const [result, setResult] = useState<TryOnResult | null>(null);
   const [tryonLoading, setTryonLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -61,115 +68,189 @@ export default function TryOnPage() {
     } finally { setTryonLoading(false); }
   };
 
-  const handleReset = () => { setHandId(null); setHandPreview(null); setSelectedStyle(null); setResult(null); };
+  const handleReset = () => {
+    setHandId(null);
+    setHandPreview(null);
+    setSelectedStyle(null);
+    setResult(null);
+  };
+
   const selectedStyleObj = styles.find(s => s.id === selectedStyle);
-  const step = handPreview ? (result ? 3 : 2) : 1;
+  const COL_WIDTH = '1fr';
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, gap: 0 }}>
-        {['选择手图', '挑选款式', '查看效果'].map((label, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div className={`step-dot ${step > i + 1 ? 'done' : step >= i + 1 ? 'active' : ''}`}>
-                {step > i + 1 ? <CheckCircleOutlined /> : i + 1}
-              </div>
-              <span style={{ fontSize: 12, color: step >= i + 1 ? '#333' : '#ccc' }}>{label}</span>
-            </div>
-            {i < 2 && <div style={{ width: 60, height: 2, margin: '0 8px', marginBottom: 20, background: step > i + 1 ? '#52c41a' : step > i ? '#ffb6d9' : '#f0f0f0', transition: 'all 0.4s' }} />}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        {/* Step 1: Hand image — unified history */}
-        <Card title="① 选择手部照片" style={{ flex: 1, minWidth: 300, maxWidth: 420 }}
-          extra={handPreview && <Button size="small" icon={<ReloadOutlined />} onClick={handleReset}>重选</Button>}>
-          {/* Upload */}
-          <Upload.Dragger accept="image/*" showUploadList={false} beforeUpload={handleUpload} disabled={uploadLoading}
-            style={{ padding: '10px 0', marginBottom: 14 }}>
-            {uploadLoading ? <Spin /> : handPreview && handId?.startsWith('user_') ? (
-              <img src={handPreview} alt="手图" style={{ maxHeight: 80, borderRadius: 8 }} />
+      {/* Three-column equal-width layout */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(3, ${COL_WIDTH})`,
+        gap: 'var(--space-lg)',
+        marginBottom: 'var(--space-2xl)',
+      }}>
+        {/* Column 1: Hand Photo */}
+        <Card
+          className="gradient-border-subtle"
+          title={<span style={{ fontWeight: 600 }}>① 选择手部照片</span>}
+          extra={handPreview && <Button size="small" icon={<ReloadOutlined />} onClick={handleReset}>重选</Button>}
+        >
+          {/* Large preview */}
+          <div className={`preview-area-gradient ${handPreview ? 'has-image' : ''}`} style={{ marginBottom: 12 }}>
+            {handPreview ? (
+              <img src={handPreview} alt="已选手图" />
             ) : (
-              <div><UploadOutlined style={{ fontSize: 24, color: '#ff69b4' }} /><p style={{ marginTop: 4, fontSize: 12 }}>点击上传新手图</p></div>
+              <div className="preview-placeholder">
+                <UploadOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
+                <span style={{ fontSize: 13 }}>选择手部照片</span>
+              </div>
+            )}
+          </div>
+
+          {/* Upload */}
+          <Upload.Dragger
+            accept="image/*"
+            showUploadList={false}
+            beforeUpload={handleUpload}
+            disabled={uploadLoading}
+            style={{ padding: '8px 0', marginBottom: 12 }}
+          >
+            {uploadLoading ? <Spin /> : (
+              <div>
+                <UploadOutlined style={{ fontSize: 18, color: 'var(--primary)' }} />
+                <p style={{ marginTop: 2, fontSize: 12 }}>点击/拖拽上传新照片</p>
+              </div>
             )}
           </Upload.Dragger>
 
-          {/* 统一历史上传列表 */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 8 }}>
-            <HistoryOutlined style={{ marginRight: 4 }} />历史上传 ({handImages.length}张)
+          {/* History thumbnails */}
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            <HistoryOutlined style={{ marginRight: 4 }} />
+            历史记录 ({handImages.length})
           </div>
-          <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {handImages.map(h => (
               <Tooltip key={h.id} title={h.name} placement="top">
                 <div onClick={() => handleSelectHand(h)} style={{
-                  width: 76, height: 76, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                  border: handId === h.id ? '3px solid #ff69b4' : '2px solid #eee',
-                  boxShadow: handId === h.id ? '0 0 0 2px rgba(255,105,180,0.2)' : 'none',
-                  transition: 'all 0.2s', position: 'relative',
-                  opacity: handId && handId !== h.id ? 0.65 : 1,
+                  width: 56, height: 56, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                  border: handId === h.id ? '2px solid var(--primary)' : '2px solid var(--border)',
+                  boxShadow: handId === h.id ? '0 0 0 2px var(--primary-glow)' : 'none',
+                  transition: 'all 0.2s var(--ease-out-quart)',
+                  opacity: handId && handId !== h.id ? 0.6 : 1,
                 }}>
                   <img src={h.url} alt={h.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, textAlign: 'center', padding: '2px 0', lineHeight: 1.1 }}>
-                    {h.type === 'user' ? h.name : h.name.replace('Hand ', '#')}
-                  </div>
-                  {h.type === 'user' && (
-                    <div style={{ position: 'absolute', top: 3, right: 3, background: '#ff69b4', color: '#fff', fontSize: 8, borderRadius: 3, padding: '1px 4px' }}>NEW</div>
-                  )}
                 </div>
               </Tooltip>
             ))}
             {handImages.length === 0 && !loading && (
-              <div style={{ width: '100%', textAlign: 'center', padding: 20, color: '#ccc', fontSize: 13 }}>暂无手图记录</div>
+              <div style={{ width: '100%', textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 12 }}>
+                暂无记录
+              </div>
             )}
           </div>
         </Card>
 
-        {/* Step 2: Style */}
-        <Card title="② 选择美甲款式" style={{ flex: 1, minWidth: 300, maxWidth: 400 }}>
-          <Select showSearch placeholder="搜索款式..." style={{ width: '100%' }} value={selectedStyle} onChange={setSelectedStyle}
+        {/* Column 2: Nail Style */}
+        <Card
+          className="gradient-border-subtle"
+          title={<span style={{ fontWeight: 600 }}>② 选择美甲款式</span>}
+        >
+          {/* Large preview */}
+          <div className={`preview-area-gradient ${selectedStyleObj ? 'has-image' : ''}`} style={{ marginBottom: 12 }}>
+            {selectedStyleObj ? (
+              selectedStyleObj.local_url ? (
+                <img src={selectedStyleObj.local_url} alt={selectedStyleObj.name} />
+              ) : (
+                <div style={{
+                  width: '100%', height: '100%',
+                  background: `linear-gradient(135deg, ${selectedStyleObj.color_tone}, ${selectedStyleObj.color_tone}88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: 64 }}>💅</span>
+                </div>
+              )
+            ) : (
+              <div className="preview-placeholder">
+                <ExperimentOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
+                <span style={{ fontSize: 13 }}>选择美甲款式</span>
+              </div>
+            )}
+          </div>
+
+          {/* Search & swatches */}
+          <Select
+            showSearch
+            placeholder="搜索款式..."
+            style={{ width: '100%', marginBottom: 12 }}
+            value={selectedStyle}
+            onChange={setSelectedStyle}
             filterOption={(input, option) => (option?.label as string || '').includes(input)}
-            options={styles.map(s => ({ label: s.name, value: s.id }))} size="large" loading={loading} />
-          <div style={{ maxHeight: 300, overflowY: 'auto', marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            options={styles.map(s => ({ label: s.name, value: s.id }))}
+            loading={loading}
+          />
+
+          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {styles.map(s => (
               <div key={s.id} onClick={() => setSelectedStyle(s.id)}
                 className={`nail-swatch ${selectedStyle === s.id ? 'selected' : ''}`}
                 style={{
-                  width: 72, height: 72, borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
-                  border: selectedStyle === s.id ? '3px solid #ff69b4' : '3px solid transparent',
-                  boxShadow: selectedStyle === s.id ? '0 0 0 2px rgba(255,105,180,0.2)' : '0 1px 3px rgba(0,0,0,0.1)',
-                  transition: 'all 0.2s', position: 'relative',
+                  width: 56, height: 56, borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
+                  border: selectedStyle === s.id ? '2px solid var(--primary)' : '2px solid transparent',
+                  boxShadow: selectedStyle === s.id ? '0 0 0 2px var(--primary-glow)' : '0 1px 3px rgba(0,0,0,0.08)',
+                  transition: 'all 0.2s var(--ease-out-quart)', position: 'relative',
                 }}>
                 {s.local_url ? (
                   <img src={s.local_url} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${s.color_tone}, ${s.color_tone}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>{s.name.slice(0, 2)}</span>
+                  <div style={{
+                    width: '100%', height: '100%',
+                    background: `linear-gradient(135deg, ${s.color_tone}, ${s.color_tone}88)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: 9, color: '#fff', fontWeight: 600 }}>{s.name.slice(0, 2)}</span>
                   </div>
                 )}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, textAlign: 'center', padding: '1px 0' }}>
-                  {s.name.slice(0, 4)}
-                </div>
               </div>
             ))}
           </div>
-          <Button type="primary" icon={<ExperimentOutlined />} onClick={handleTryOn} loading={tryonLoading}
-            block style={{ marginTop: 16, height: 42, fontSize: 14 }} size="large" disabled={!handId || !selectedStyle}>
-            {tryonLoading ? 'AI生成中...' : selectedStyleObj ? `试戴「${selectedStyleObj.name}」` : '请选择手图和款式'}
+
+          {/* Try-on CTA */}
+          <Button
+            type="primary"
+            icon={<ExperimentOutlined />}
+            onClick={handleTryOn}
+            loading={tryonLoading}
+            block
+            style={{ marginTop: 16, height: 42, fontSize: 14 }}
+            size="large"
+            disabled={!handId || !selectedStyle}
+          >
+            {tryonLoading ? 'AI 生成中...' : selectedStyleObj ? `试戴「${selectedStyleObj.name}」` : '请选择手图和款式'}
           </Button>
         </Card>
 
-        {/* Step 3: Result */}
-        <Card title="③ 试戴效果" style={{ flex: 1, minWidth: 300 }} ref={resultRef as any}>
+        {/* Column 3: Result */}
+        <Card
+          className="gradient-border-subtle"
+          title={<span style={{ fontWeight: 600 }}>③ 试戴效果</span>}
+          ref={resultRef as any}
+        >
           {tryonLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" />
-              <p style={{ marginTop: 12, color: '#999' }}>百炼AI正在生成试戴效果...</p>
-              <Text type="secondary" style={{ fontSize: 11 }}>首次约5-10秒，缓存后秒出</Text>
+            <div className="tryon-generating">
+              <div className="tryon-generating-canvas">
+                <div className="paint-blob" />
+                <div className="paint-blob" />
+                <div className="paint-blob" />
+                <div className="paint-blob" />
+              </div>
+              <div className="gen-strokes" />
+              <div className="tryon-generating-overlay">
+                <div className="gen-text">✨ AI 正在创作...</div>
+                <div className="gen-sub">正在生成AI试戴效果图</div>
+              </div>
             </div>
           ) : result ? (
-            <div>
-              <div className="result-image-container" style={{ borderRadius: 12, marginBottom: 12 }}>
-                <img src={result.result_url} alt="试戴效果" style={{ width: '100%', borderRadius: 12 }} />
+            <div className="tryon-result-fade-in">
+              <div className="result-image-container" style={{ borderRadius: 'var(--radius-lg)', marginBottom: 12 }}>
+                <img src={result.result_url} alt="试戴效果" style={{ width: '100%', borderRadius: 'var(--radius-lg)' }} />
                 <div className="result-overlay">
                   <div style={{ fontWeight: 600 }}>{result.style_name}</div>
                   <div style={{ fontSize: 11, opacity: 0.8 }}>
@@ -183,10 +264,19 @@ export default function TryOnPage() {
               </div>
             </div>
           ) : (
-            <Empty description={<span style={{ color: '#ccc' }}>{handPreview ? '点击"开始试戴"查看效果' : '选择手图和款式后查看'}</span>} />
+            <Empty
+              description={
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {handPreview ? '点击「开始试戴」查看效果' : '选择手图和款式后查看'}
+                </span>
+              }
+            />
           )}
         </Card>
       </div>
+
+      {/* 悬浮"问问小美"按钮 */}
+      <FloatingAskButton />
     </div>
   );
 }

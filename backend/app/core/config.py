@@ -16,10 +16,14 @@ class Settings(BaseSettings):
     PG_PASSWORD: str = "postgres"
     PG_DB: str = "nail_tryon"
 
-    # LongCat API (OpenAI-compatible, from .env)
+    # LongCat API (reserved for future image gen)
     LONGCAT_API_KEY: str = ""
     LONGCAT_BASE_URL: str = "https://api.longcat.chat/openai"
     LONGCAT_MODEL: str = "LongCat-2.0-Preview"
+
+    # OpenClaw Gateway (local AI agent engine, uses MiMo via Token Plan)
+    OPENCLAW_BASE_URL: str = "http://127.0.0.1:18789"
+    OPENCLAW_GATEWAY_TOKEN: str = ""
 
     # Bailian API (image generation, from .env)
     DASHSCOPE_API_KEY: str = ""

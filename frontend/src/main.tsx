@@ -8,7 +8,19 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#ff69b4' } }}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        token: {
+          colorPrimary: '#c0395c',
+          fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          borderRadius: 10,
+          colorBgContainer: '#ffffff',
+          colorBorder: 'oklch(88% 0.006 30)',
+          fontSize: 14,
+        },
+      }}
+    >
       <BrowserRouter>
         <App />
       </BrowserRouter>

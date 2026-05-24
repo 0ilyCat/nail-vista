@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Tag, Input, Select, Spin, message, Empty, Button } from 'antd';
 import { HeartOutlined, EyeOutlined, ExperimentOutlined, SearchOutlined } from '@ant-design/icons';
 import { getStyles, getCategories, NailStyleItem } from '../services/api';
+import FloatingAskButton from '../components/common/FloatingAskButton';
 
 export default function StyleBrowsePage() {
+  const navigate = useNavigate();
   const [styles, setStyles] = useState<NailStyleItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,7 @@ export default function StyleBrowsePage() {
   return (
     <div>
       {/* Filters bar */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Input.Search
             placeholder="搜索美甲款式..."
@@ -49,7 +52,7 @@ export default function StyleBrowsePage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             onSearch={handleSearch}
-            prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+            prefix={<SearchOutlined style={{ color: 'var(--text-muted)' }} />}
             allowClear
           />
           <Select
@@ -72,7 +75,7 @@ export default function StyleBrowsePage() {
               { label: '📋 名称', value: 'name' },
             ]}
           />
-          <span style={{ marginLeft: 'auto', color: '#999', fontSize: 13 }}>
+          <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>
             共 {total} 款
           </span>
         </div>
@@ -88,7 +91,7 @@ export default function StyleBrowsePage() {
               <Col key={item?.id || idx} xs={24} sm={12} md={8} lg={6}>
                 {loading ? (
                   <Card>
-                    <div className="skeleton" style={{ height: 140, marginBottom: 12 }} />
+                    <div className="skeleton" style={{ height: 160, marginBottom: 12 }} />
                     <div className="skeleton" style={{ height: 18, width: '60%', marginBottom: 8 }} />
                     <div className="skeleton" style={{ height: 14, width: '40%' }} />
                   </Card>
@@ -98,15 +101,31 @@ export default function StyleBrowsePage() {
                     className="style-card"
                     bodyStyle={{ padding: 0 }}
                     cover={
-                      <div className="style-cover" style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
+                      <div className="style-cover" style={{ height: 200, position: 'relative', overflow: 'hidden' }}>
                         {item.local_url ? (
                           <img src={item.local_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${item.color_tone || '#ff69b4'}, ${item.color_tone || '#ff69b4'}44, #fff)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{
+                            width: '100%', height: '100%',
+                            background: `linear-gradient(135deg, ${item.color_tone || '#c0395c'}, ${item.color_tone || '#c0395c'}44, #fff)`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
                             <span style={{ fontSize: 56 }}>💅</span>
                           </div>
                         )}
                         <Tag color="pink" style={{ position: 'absolute', top: 8, right: 8, borderRadius: 4 }}>{item.category}</Tag>
+
+                        {/* AI 试戴浮层按钮 */}
+                        <button
+                          className="tryon-overlay-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/user/tryon?styleId=${item.id}`);
+                          }}
+                        >
+                          <ExperimentOutlined style={{ fontSize: 12 }} />
+                          AI 试戴
+                        </button>
                       </div>
                     }
                     actions={[
@@ -148,6 +167,9 @@ export default function StyleBrowsePage() {
           </div>
         )}
       </Spin>
+
+      {/* 悬浮"问问小美"按钮 */}
+      <FloatingAskButton />
     </div>
   );
 }

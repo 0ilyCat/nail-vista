@@ -9,24 +9,30 @@ from collections import defaultdict
 class TrendAnalyzer:
     """运营趋势分析器"""
 
-    # 热度分权重
+    # 热度分权重（加入订单维度）
     WEIGHTS = {
-        "tryon": 0.40,    # 试戴权重最高
-        "favorite": 0.25,  # 收藏
-        "view": 0.20,      # 浏览
-        "share": 0.10,     # 分享
+        "tryon": 0.30,     # 试戴
+        "orders": 0.25,    # 订单（新增）
+        "favorite": 0.20,  # 收藏
+        "view": 0.15,      # 浏览
+        "share": 0.05,     # 分享
         "duration": 0.05,  # 浏览时长
     }
 
     def calc_hot_score(self, metrics: dict) -> float:
-        """计算热度分"""
+        """计算热度分（含订单/退款维度）"""
         score = (
             metrics.get("tryons", 0) * self.WEIGHTS["tryon"]
+            + metrics.get("orders", 0) * self.WEIGHTS["orders"]
             + metrics.get("favorites", 0) * self.WEIGHTS["favorite"]
             + metrics.get("views", 0) * self.WEIGHTS["view"]
             + metrics.get("shares", 0) * self.WEIGHTS["share"]
             + min(metrics.get("avg_duration", 0) / 300, 1.0) * 100 * self.WEIGHTS["duration"]
         )
+        # 退款惩罚
+        refunds = metrics.get("refunds", 0)
+        if refunds > 0:
+            score *= max(0.6, 1.0 - refunds / max(metrics.get("orders", 1), 1))
         return round(score, 2)
 
     def rank_styles(self, style_metrics: list[dict], limit: int = 10) -> list[dict]:

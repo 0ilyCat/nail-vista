@@ -1,0 +1,21 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "NailVista" [level=1] [ref=e5]
+    - paragraph [ref=e6]: AI 驱动的美甲试戴与智能运营平台。选择你的身份，开始体验。
+  - generic [ref=e7]:
+    - generic [ref=e8] [cursor=pointer]:
+      - generic [ref=e9]: 💅
+      - heading "我是用户" [level=2] [ref=e10]
+      - paragraph [ref=e11]: 浏览精选美甲款式，AI 一键试戴，找到最适合你的指尖艺术。
+      - button "进入试戴 right" [ref=e12]:
+        - text: 进入试戴
+        - img "right" [ref=e13]:
+          - img [ref=e14]
+    - generic [ref=e16] [cursor=pointer]:
+      - generic [ref=e17]: 📊
+      - heading "我是运营" [level=2] [ref=e18]
+      - paragraph [ref=e19]: 实时数据看板，AI 运营分析，洞察趋势，驱动决策。
+      - button "进入看板 right" [ref=e20]:
+        - text: 进入看板
+        - img "right" [ref=e21]:
+          - img [ref=e22]

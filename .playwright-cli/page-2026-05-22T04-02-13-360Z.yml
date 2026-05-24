@@ -1,0 +1,73 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]: NailVista
+    - navigation [ref=e6]:
+      - button "appstore 款式浏览" [ref=e7] [cursor=pointer]:
+        - img "appstore" [ref=e9]:
+          - img [ref=e10]
+        - generic [ref=e12]: 款式浏览
+      - button "experiment AI 试戴" [ref=e13] [cursor=pointer]:
+        - img "experiment" [ref=e15]:
+          - img [ref=e16]
+        - generic [ref=e18]: AI 试戴
+      - button "dashboard 运营看板" [ref=e20] [cursor=pointer]:
+        - img "dashboard" [ref=e22]:
+          - img [ref=e23]
+        - generic [ref=e25]: 运营看板
+      - button "home 首页" [ref=e26] [cursor=pointer]:
+        - img "home" [ref=e28]:
+          - img [ref=e29]
+        - generic [ref=e31]: 首页
+  - main [ref=e32]:
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e39]: ① 选择手部照片
+          - generic [ref=e40]:
+            - generic [ref=e42]:
+              - img "upload" [ref=e43]:
+                - img [ref=e44]
+              - text: 选择手部照片
+            - button "upload 点击/拖拽上传新照片" [ref=e48] [cursor=pointer]:
+              - generic [ref=e50]:
+                - img "upload" [ref=e51]:
+                  - img [ref=e52]
+                - paragraph [ref=e54]: 点击/拖拽上传新照片
+            - generic [ref=e55]:
+              - img "history" [ref=e56]:
+                - img [ref=e57]
+              - text: 历史记录 (0)
+        - generic [ref=e59]:
+          - generic [ref=e62]: ② 选择美甲款式
+          - generic [ref=e63]:
+            - generic [ref=e65]:
+              - img "experiment" [ref=e66]:
+                - img [ref=e67]
+              - text: 选择美甲款式
+            - generic [ref=e69] [cursor=pointer]:
+              - generic [ref=e71]:
+                - combobox [ref=e73]
+                - generic: 搜索款式...
+              - img [ref=e74]:
+                - img [ref=e75]
+            - button "experiment 请选择手图和款式" [disabled] [ref=e77]:
+              - generic:
+                - img "experiment":
+                  - img
+              - generic: 请选择手图和款式
+        - generic [ref=e78]:
+          - generic [ref=e81]: ③ 试戴效果
+          - generic [ref=e83]:
+            - img "暂无数据" [ref=e85]
+            - generic [ref=e97]: 选择手图和款式后查看
+      - generic [ref=e98]:
+        - generic [ref=e102]:
+          - text: 💬 小美
+          - generic [ref=e103]: AI 时尚顾问 — 可以帮你推荐款式、评价试戴效果
+        - generic [ref=e105]:
+          - paragraph [ref=e109]: 嗨！我是小美 💅 你的 AI 时尚顾问。可以帮你：\n\n✨ 搜索和推荐美甲款式\n📸 评价试戴效果图\n💡 解答美甲搭配问题\n\n试试问我「有没有适合夏天的法式美甲？」
+          - generic [ref=e110]:
+            - textbox "问问小美吧，比如「推荐一款适合约会的美甲」..." [ref=e111]
+            - button "send" [disabled] [ref=e112]:
+              - img "send" [ref=e113]:
+                - img [ref=e114]

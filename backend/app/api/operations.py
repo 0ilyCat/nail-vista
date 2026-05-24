@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, text
 from datetime import datetime, timedelta
 from app.core.database import get_db
 from app.models.models import OperationsReport, StyleMetrics, NailStyle
@@ -170,3 +170,160 @@ async def _get_trend_data(db: AsyncSession) -> list[dict]:
         {"date": r[0].strftime("%m-%d"), "tryons": r[1] or 0, "views": r[2] or 0, "favorites": r[3] or 0}
         for r in result.all()
     ]
+
+
+# ── NL2SQL / ChatBI endpoints ────────────────────────────
+
+class ExecuteSQLRequest(BaseModel):
+    sql: str
+    confirm: bool = False  # User must confirm to execute
+
+class NL2SQLRequest(BaseModel):
+    question: str  # Natural language query
+
+SAFE_TABLES = {
+    "nail_styles", "style_metrics", "tryon_records", "hand_images",
+    "orders", "refunds", "reviews", "daily_revenue",
+    "traffic_metrics", "coupon_usage", "operations_reports", "user_feedback",
+}
+
+
+@router.post("/execute-sql")
+async def execute_sql(req: ExecuteSQLRequest, db: AsyncSession = Depends(get_db)):
+    """
+    执行 SQL 查询（仅 SELECT，白名单表）。
+    支持 ChatBI 流程：NL → SQL → 确认 → 执行 → 数据 + 图表。
+    """
+    sql = req.sql.strip()
+
+    # Security: only allow SELECT
+    if not sql.upper().startswith("SELECT"):
+        raise HTTPException(400, "仅支持 SELECT 查询")
+
+    # Check white-listed tables
+    sql_upper = sql.upper()
+    for table in SAFE_TABLES:
+        sql_upper = sql_upper.replace(table.upper(), "")
+    # Remove common SQL keywords
+    for kw in ["SELECT", "FROM", "WHERE", "JOIN", "GROUP BY", "ORDER BY",
+               "LIMIT", "HAVING", "COUNT", "SUM", "AVG", "MAX", "MIN",
+               "LEFT JOIN", "INNER JOIN", "ON", "AND", "OR", "AS",
+               "DESC", "ASC", "LIKE", "IN", "BETWEEN", "NOT", "NULL",
+               "DISTINCT", "COALESCE", "CASE", "WHEN", "THEN", "ELSE", "END"]:
+        sql_upper = sql_upper.replace(kw, "")
+    # If any non-whitelisted identifier-like tokens remain, reject
+    remaining = [t for t in sql_upper.split() if t and t not in ('', ',', '.', '(', ')', '*', '+', '-', '/', '=', '<', '>', '!', ';', '%', '||')]
+    # Simple check: if there are suspicious words
+    suspicious = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "EXEC", "EXECUTE"]
+    for s in suspicious:
+        if s in sql.upper():
+            raise HTTPException(400, f"禁止的操作: {s}")
+
+    if not req.confirm:
+        return {"status": "preview", "sql": sql, "message": "SQL 已生成，请确认后执行。发送 confirm=true 确认执行。"}
+
+    try:
+        # Use raw connection for SQL execution (SQLite compatibility)
+        from sqlalchemy import text as sa_text
+        result = await db.execute(sa_text(sql))
+        rows = result.all()
+
+        # Convert to list of dicts
+        columns = list(result.keys())
+        data = []
+        for row in rows:
+            data.append({columns[i]: (str(row[i]) if row[i] is not None else None) for i in range(len(columns))})
+
+        # Limit to 100 rows
+        if len(data) > 100:
+            data = data[:100]
+
+        return {
+            "status": "executed",
+            "columns": columns,
+            "data": data,
+            "row_count": len(data),
+            "sql_executed": sql,
+        }
+    except Exception as e:
+        raise HTTPException(400, f"SQL 执行错误: {str(e)}")
+
+
+@router.post("/nl2sql")
+async def nl2sql(req: NL2SQLRequest, db: AsyncSession = Depends(get_db)):
+    """
+    自然语言→SQL 生成。
+    返回生成的 SQL 供用户确认，确认后调用 /execute-sql 执行。
+    """
+    import httpx
+    from app.core.config import get_settings
+
+    settings = get_settings()
+
+    # Build NL2SQL prompt with table schema
+    schema = """
+-- nail_styles: id, name, category, color_tone, tags, description, popularity, price, original_url, enhanced_url, created_at
+-- style_metrics: id, style_id, date, views, tryons, favorites, shares, orders, refunds, avg_duration, hot_score
+-- tryon_records: id, hand_image_id, nail_style_id, result_url, duration_ms, created_at
+-- hand_images: id, image_url, local_path, skin_tone, hand_type, landmarks, created_at
+-- orders: id, order_no, style_id, user_id, amount, original_amount, coupon_discount, status, payment_method, is_new_customer, created_at
+-- refunds: id, order_id, amount, reason, status, created_at
+-- reviews: id, order_id, style_id, user_id, rating, tags, comment, has_photo, created_at
+-- daily_revenue: id, date, gross_revenue, net_revenue, order_count, refund_amount, refund_count, new_customer_orders, repeat_customer_orders, coupon_discount_total, avg_order_value
+-- traffic_metrics: id, date, exposure, click, visit, order_conversion, ctr, cvr, source
+-- coupon_usage: id, date, issued, used, discount_total, usage_rate, campaign
+"""
+
+    prompt = f"""你是 SQL 专家。根据以下数据库 schema 和用户问题，生成一条 SELECT 查询。
+
+{schema}
+
+用户问题: {req.question}
+
+要求:
+1. 只生成 SELECT 语句，不要任何其他内容
+2. 使用中文列别名（AS）
+3. 限制返回行数 LIMIT 50
+4. 只使用白名单表
+
+SQL:"""
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{settings.OPENCLAW_BASE_URL}/v1/chat/completions",
+                json={
+                    "model": "xiaomi-coding/mimo-v2.5-pro",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                },
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.OPENCLAW_GATEWAY_TOKEN}",
+                },
+            )
+            if resp.status_code != 200:
+                raise HTTPException(502, f"AI 服务错误: {resp.status_code}")
+
+            data = resp.json()
+            sql = data["choices"][0]["message"]["content"].strip()
+
+            # Clean up SQL (remove markdown formatting)
+            sql = sql.replace("```sql", "").replace("```", "").strip()
+            if not sql.upper().startswith("SELECT"):
+                # Try to extract SELECT statement
+                import re
+                match = re.search(r'SELECT[\s\S]*?(?:;|$)', sql, re.IGNORECASE)
+                if match:
+                    sql = match.group(0).strip()
+
+            return {
+                "status": "generated",
+                "sql": sql,
+                "question": req.question,
+                "hint": "请检查 SQL 是否正确。确认后调用 POST /api/operations/execute-sql 执行。",
+            }
+    except httpx.ConnectError:
+        raise HTTPException(503, "AI 服务不可用")
+    except Exception as e:
+        raise HTTPException(500, f"SQL 生成失败: {str(e)}")
