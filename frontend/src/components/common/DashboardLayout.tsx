@@ -52,7 +52,7 @@ export default function DashboardLayout() {
         </nav>
       </header>
 
-      <main style={{ flex: 1, padding: 'var(--space-xl)', maxWidth: 1400, width: '100%', margin: '0 auto' }}>
+      <main style={{ flex: 1, padding: '12px 16px', maxWidth: 1400, width: '100%', margin: '0 auto', overflow: 'hidden' }}>
         <div className="page-enter">
           <Outlet />
         </div>

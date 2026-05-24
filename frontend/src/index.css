@@ -757,10 +757,10 @@ body {
    ============================================ */
 @keyframes blobMorph {
   0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
-  20%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.08); }
-  40%  { border-radius: 50% 50% 40% 60% / 40% 40% 60% 60%; transform: scale(1.03); }
-  60%  { border-radius: 40% 60% 50% 50% / 70% 50% 30% 50%; transform: scale(1.06); }
-  80%  { border-radius: 35% 50% 60% 45% / 55% 40% 50% 45%; transform: scale(1.02); }
+  20%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.04); }
+  40%  { border-radius: 50% 50% 40% 60% / 40% 40% 60% 60%; transform: scale(1.02); }
+  60%  { border-radius: 40% 60% 50% 50% / 70% 50% 30% 50%; transform: scale(1.03); }
+  80%  { border-radius: 35% 50% 60% 45% / 55% 40% 50% 45%; transform: scale(1.01); }
   100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
 }
 
@@ -861,29 +861,35 @@ body {
   100% { transform: translate(0, 0) rotate(90deg) scale(0.9); opacity: 0.6; }
 }
 
-@keyframes paintColorCycle {
-  0%   { background-color: oklch(70% 0.22 12); }
-  14%  { background-color: oklch(65% 0.20 45); }
-  28%  { background-color: oklch(60% 0.18 80); }
-  42%  { background-color: oklch(58% 0.16 160); }
-  57%  { background-color: oklch(55% 0.18 240); }
-  71%  { background-color: oklch(58% 0.20 300); }
-  85%  { background-color: oklch(62% 0.22 340); }
-  100% { background-color: oklch(70% 0.22 12); }
+@keyframes ribbonFloat1 {
+  0%   { transform: translate(-10%, -5%) rotate(0deg) scaleX(1.2); }
+  25%  { transform: translate(15%, 10%) rotate(90deg) scaleX(0.8); }
+  50%  { transform: translate(-5%, 20%) rotate(180deg) scaleX(1.3); }
+  75%  { transform: translate(10%, -10%) rotate(270deg) scaleX(0.9); }
+  100% { transform: translate(-10%, -5%) rotate(360deg) scaleX(1.2); }
 }
 
-@keyframes paintShimmer {
-  0%, 100% { filter: brightness(1) saturate(1); }
-  50%      { filter: brightness(1.15) saturate(1.2); }
+@keyframes ribbonFloat2 {
+  0%   { transform: translate(5%, 10%) rotate(60deg) scaleX(0.9); }
+  33%  { transform: translate(-15%, -15%) rotate(150deg) scaleX(1.4); }
+  66%  { transform: translate(20%, 5%) rotate(240deg) scaleX(0.7); }
+  100% { transform: translate(5%, 10%) rotate(420deg) scaleX(0.9); }
 }
 
+@keyframes ribbonFloat3 {
+  0%   { transform: translate(0%, 15%) rotate(30deg) scaleX(1); }
+  50%  { transform: translate(15%, -10%) rotate(210deg) scaleX(1.5); }
+  100% { transform: translate(0%, 15%) rotate(390deg) scaleX(1); }
+}
+
+/* ── Generating container ── */
 .tryon-generating {
   width: 100%;
   aspect-ratio: 1;
   border-radius: var(--radius-lg);
   overflow: hidden;
   position: relative;
-  background: oklch(20% 0.005 30);
+  background: oklch(18% 0.005 30);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -891,54 +897,75 @@ body {
 
 .tryon-generating-canvas {
   position: absolute;
-  inset: 0;
+  inset: -20%;
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: blur(0px);
 }
 
-/* Blob paint strokes */
-.paint-blob {
+/* Color ribbons — thin wide orbs that interweave via mix-blend-mode */
+.paint-ribbon {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(18px);
+  border-radius: 40% 60% 50% 50% / 45% 55% 45% 55%;
   mix-blend-mode: screen;
+  opacity: 0.8;
+  filter: blur(12px);
 }
 
-.paint-blob:nth-child(1) {
+.paint-ribbon:nth-child(1) {
+  width: 70%;
+  height: 45%;
+  background: linear-gradient(135deg, oklch(70% 0.24 12), oklch(55% 0.20 340));
+  animation: ribbonFloat1 6s var(--ease-out-quart) infinite;
+  top: 15%;
+  left: -5%;
+}
+
+.paint-ribbon:nth-child(2) {
   width: 55%;
   height: 55%;
-  background: oklch(70% 0.22 12);
-  animation: paintStroke1 4s var(--ease-out-quart) infinite, paintColorCycle 8s linear infinite, paintShimmer 2s var(--ease-out-quart) infinite;
+  background: linear-gradient(180deg, oklch(62% 0.22 45), oklch(50% 0.18 80));
+  animation: ribbonFloat2 7s var(--ease-out-quart) infinite;
+  top: -10%;
+  right: 0%;
+}
+
+.paint-ribbon:nth-child(3) {
+  width: 50%;
+  height: 60%;
+  background: linear-gradient(225deg, oklch(58% 0.20 160), oklch(50% 0.16 220));
+  animation: ribbonFloat3 5.5s var(--ease-out-quart) infinite;
+  bottom: -15%;
   left: 20%;
-  top: 15%;
 }
 
-.paint-blob:nth-child(2) {
-  width: 45%;
-  height: 50%;
-  background: oklch(65% 0.20 80);
-  animation: paintStroke2 5s var(--ease-out-quart) infinite, paintColorCycle 8s linear 2s infinite, paintShimmer 2.5s var(--ease-out-quart) 0.5s infinite;
-  right: 15%;
-  bottom: 20%;
-}
-
-.paint-blob:nth-child(3) {
-  width: 40%;
+.paint-ribbon:nth-child(4) {
+  width: 65%;
   height: 40%;
-  background: oklch(58% 0.20 300);
-  animation: paintStroke3 3.5s var(--ease-out-quart) infinite, paintColorCycle 8s linear 4s infinite, paintShimmer 3s var(--ease-out-quart) 1s infinite;
-  left: 25%;
-  bottom: 10%;
+  background: linear-gradient(90deg, oklch(60% 0.22 290), oklch(55% 0.18 320));
+  animation: ribbonFloat1 6.5s var(--ease-out-quart) 1.5s infinite reverse;
+  bottom: 5%;
+  right: -10%;
 }
 
-.paint-blob:nth-child(4) {
-  width: 35%;
-  height: 35%;
-  background: oklch(55% 0.18 160);
-  animation: paintStroke2 4.5s var(--ease-out-quart) 1s infinite reverse, paintColorCycle 8s linear 6s infinite, paintShimmer 2.8s var(--ease-out-quart) 1.5s infinite;
-  right: 25%;
-  top: 10%;
+.paint-ribbon:nth-child(5) {
+  width: 40%;
+  height: 50%;
+  background: linear-gradient(45deg, oklch(65% 0.20 12), oklch(58% 0.16 340), oklch(54% 0.14 320));
+  animation: ribbonFloat2 5s var(--ease-out-quart) 3s infinite;
+  top: 25%;
+  left: 30%;
+}
+
+/* Glow overlay */
+.tryon-generating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 35% 40%, oklch(70% 0.05 30 / 0.06) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Center shimmer overlay */
@@ -967,17 +994,6 @@ body {
 }
 
 /* Pencil strokes overlay */
-.gen-strokes {
-  position: absolute;
-  inset: 0;
-  opacity: 0.25;
-  background-image:
-    repeating-linear-gradient(15deg, transparent, transparent 8px, oklch(80% 0.05 30 / 0.15) 8px, oklch(80% 0.05 30 / 0.15) 9px),
-    repeating-linear-gradient(-25deg, transparent, transparent 12px, oklch(70% 0.08 200 / 0.1) 12px, oklch(70% 0.08 200 / 0.1) 13px);
-  animation: paintStroke1 8s linear infinite;
-  z-index: 1;
-}
-
 /* Result fade-in */
 .tryon-result-fade-in {
   animation: fadeSlideIn 500ms var(--ease-out-expo);
@@ -1083,7 +1099,7 @@ body {
    ============================================ */
 .chat-page-layout {
   display: flex;
-  height: calc(100vh - 56px - var(--space-2xl) * 2);
+  height: calc(100vh - 56px - var(--space-md));
   gap: var(--space-lg);
   align-items: stretch;
 }
@@ -1111,8 +1127,8 @@ body {
 }
 
 .chat-page-blob {
-  width: 140px;
-  height: 140px;
+  width: 110px;
+  height: 110px;
   border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
   animation:
     blobMorph 5s var(--ease-out-quart) infinite,
@@ -1120,7 +1136,7 @@ body {
     blobGlowPulse 3s var(--ease-out-quart) infinite;
   position: relative;
   z-index: 1;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
 }
 
 .chat-page-blob::after {
@@ -1171,8 +1187,8 @@ body {
 .dashboard-main-layout {
   display: flex;
   gap: var(--space-md);
-  height: calc(100vh - 130px);
-  min-height: 600px;
+  height: calc(100vh - 80px);
+  overflow: hidden;
 }
 
 .dashboard-left-panel {
@@ -1181,7 +1197,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .dashboard-chat-panel {
@@ -1261,9 +1277,26 @@ body {
 }
 
 /* Ranking table */
+.dashboard-ranking-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.dashboard-ranking-card > .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 8px 12px;
+  min-height: 0;
+}
 .dashboard-ranking-table {
-  max-height: 320px;
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .dashboard-ranking-table .ant-table-thead > tr > th {
@@ -1549,8 +1582,8 @@ body {
 .btn-gradient {
   position: relative;
   border: none !important;
-  background: linear-gradient(135deg, var(--primary), oklch(45% 0.18 320), var(--accent));
-  background-size: 200% 200%;
+  background: linear-gradient(135deg, var(--primary), oklch(45% 0.18 320), var(--accent)) !important;
+  background-size: 200% 200% !important;
   animation: gradientBorder 4s var(--ease-out-quart) infinite;
   color: white !important;
   font-weight: 600 !important;
@@ -1558,12 +1591,20 @@ body {
   transition: all 0.3s var(--ease-out-expo) !important;
 }
 
-.btn-gradient:hover {
+.btn-gradient:hover,
+.btn-gradient:focus,
+.btn-gradient:active {
+  background: linear-gradient(135deg, var(--primary), oklch(45% 0.18 320), var(--accent)) !important;
+  background-size: 200% 200% !important;
+  color: white !important;
   transform: translateY(-2px);
   box-shadow: 0 4px 18px oklch(52% 0.13 12 / 0.35), 0 0 0 3px oklch(52% 0.13 12 / 0.3) !important;
 }
+
+.preview-area-gradient {
   width: 100%;
-  aspect-ratio: 1;
+  min-width: 220px;
+  height: 260px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--bg-alt);
@@ -1605,7 +1646,7 @@ body {
 .preview-area-gradient img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   position: relative;
   z-index: 1;
 }
@@ -1615,6 +1656,271 @@ body {
   z-index: 1;
   text-align: center;
   color: var(--text-muted);
+}
+
+/* ============================================
+   Revamped Try-On Flow
+   ============================================ */
+.tryon-revamp {
+  height: calc(100vh - 56px - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ── Three-image flow row ── */
+.tryon-flow {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.tryon-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 360px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.tryon-panel-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px;
+  color: var(--text);
+  background: var(--bg-alt);
+}
+
+.tryon-panel-img {
+  flex: 1;
+  min-height: 200px;
+  position: relative;
+  background: var(--bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tryon-panel-img.loaded {
+  background: oklch(18% 0.005 30);
+}
+
+.tryon-panel-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tryon-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  aspect-ratio: 1;
+  width: 100%;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.tryon-style-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+}
+
+/* ── Connectors: + and = ── */
+.tryon-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.tryon-connector-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+/* ── Generating state inside panel ── */
+.tryon-panel-generating {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(18% 0.005 30);
+  overflow: hidden;
+}
+
+.tryon-panel-gen-text {
+  position: absolute;
+  z-index: 3;
+  text-align: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.tryon-panel-gen-text .sub {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+/* ── Result meta ── */
+.tryon-result-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  background: var(--bg-alt);
+}
+
+.tryon-result-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tryon-result-source {
+  color: var(--text-muted);
+}
+
+/* ── Bottom controls row ── */
+.tryon-controls {
+  display: flex;
+  gap: var(--space-md);
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.tryon-controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tryon-controls-cta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+}
+
+.tryon-control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tryon-upload-compact {
+  padding: 4px 8px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.tryon-upload-compact .ant-upload-drag-container {
+  font-size: 12px;
+}
+
+.tryon-style-select-compact {
+  width: 100% !important;
+}
+
+.tryon-style-select-compact .ant-select-selector {
+  font-size: 12px !important;
+  height: 30px !important;
+}
+
+.tryon-thumbs-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 56px;
+  overflow-y: auto;
+}
+
+.tryon-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s var(--ease-out-quart);
+  flex-shrink: 0;
+  background: var(--bg-alt);
+  position: relative;
+}
+
+.tryon-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tryon-thumb:hover {
+  border-color: var(--primary-light);
+  transform: scale(1.08);
+}
+
+.tryon-thumb.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.tryon-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tryon-thumb-fallback span {
+  font-size: 11px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tryon-cta-btn {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  height: 44px !important;
+  padding: 0 32px !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 4px 16px var(--primary-glow) !important;
 }
 
 /* Mobile responsive */

@@ -39,18 +39,15 @@ export default function DashboardPage() {
     { label: '📝 生成日报', message: '生成今天的运营日报' },
   ];
 
+  const renderChange = (v: number) => {
+    if (v == null || isNaN(v)) return <Tag>--</Tag>;
+    return v > 0
+      ? <Tag color="success" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↑{v}%</Tag>
+      : <Tag color="error" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↓{Math.abs(v)}%</Tag>;
+  };
+
   return (
     <Spin spinning={loading}>
-      <h1 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: 'var(--text-lg)',
-        fontWeight: 600,
-        marginBottom: 12,
-        color: 'var(--text)',
-      }}>
-        运营看板
-      </h1>
-
       <div className="dashboard-main-layout">
         {/* ── Left panel: compact stats + chart + ranking ── */}
         <div className="dashboard-left-panel">
@@ -79,7 +76,7 @@ export default function DashboardPage() {
 
           {/* Trend chart — compact */}
           <Card
-            className="dashboard-trend-card gradient-border-subtle"
+            className="dashboard-trend-card"
             size="small"
             title={<span style={{ fontWeight: 600, fontSize: 13 }}>📈 7 日趋势</span>}
             extra={<Button icon={<ReloadOutlined />} onClick={loadData} size="small" />}
@@ -100,8 +97,8 @@ export default function DashboardPage() {
 
           {/* Hot ranking — compact table */}
           <Card
-            className="gradient-border-subtle"
             size="small"
+            className="dashboard-ranking-card"
             title={<span style={{ fontWeight: 600, fontSize: 13 }}>🔥 热门款式 TOP10</span>}
             bodyStyle={{ padding: 0 }}
           >
@@ -128,30 +125,19 @@ export default function DashboardPage() {
                   { title: '热度', dataIndex: 'hot_score', width: 52, align: 'right' as const,
                     render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary)', fontSize: 12 }}>{v}</span>,
                   },
-                  { title: '变化', dataIndex: 'change_pct', width: 60,
-                    render: (v: number) => v > 0
-                      ? <Tag color="success" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↑{v}%</Tag>
-                      : <Tag color="error" style={{ fontSize: 10, padding: '0 4px', lineHeight: '18px' }}>↓{Math.abs(v)}%</Tag>,
-                  },
+                  { title: '变化', dataIndex: 'change_pct', width: 60, render: renderChange },
                 ]}
                 pagination={false}
                 locale={{ emptyText: '暂无排行数据' }}
               />
             </div>
           </Card>
-
-          {/* Quick actions */}
-          <div className="dashboard-quick-actions">
-            {quickActions.map((a) => (
-              <Button key={a.label} size="small" style={{ fontSize: 11 }}>{a.label}</Button>
-            ))}
-          </div>
         </div>
 
         {/* ── Right panel: full-height AI chat ── */}
         <div className="dashboard-chat-panel">
           <Card
-            className="gradient-border-subtle dashboard-chat-card"
+            className="dashboard-chat-card"
             title={
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}>
                 <RobotOutlined style={{ color: 'var(--accent)' }} />
@@ -163,7 +149,15 @@ export default function DashboardPage() {
             <ChatWidget
               agentType="dashboard"
               placeholder="试试「今日概览」或「热门排行」..."
-              welcomeMessage="你好！我是 AI 运营助手 📊\n\n可以帮你：\n• 查询运营概览数据\n• 分析趋势变化\n• 生成运营报告\n\n试试问我「今天生意怎么样」？"
+              welcomeMessage={`你好！我是 AI 运营助手 📊
+
+可以帮你：
+
+- 查询运营概览数据
+- 分析趋势变化
+- 生成运营报告
+
+试试问我「今天生意怎么样」？`}
               quickActions={quickActions}
             />
           </Card>

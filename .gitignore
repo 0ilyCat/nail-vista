@@ -14,3 +14,11 @@ backend/static/
 
 # OpenClaw runtime state (configs & skills are committed, state is not)
 openclaw/agents/*/state/
+
+# Build output artifacts
+output/node_modules/
+output/package.json
+output/package-lock.json
+output/gen-ppt.js
+output/*.png
+.playwright-cli/

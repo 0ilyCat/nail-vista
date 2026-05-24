@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { SendOutlined, RobotOutlined, UserOutlined, ToolOutlined, BulbOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
 import ChartRenderer from './ChartRenderer';
 
@@ -350,7 +351,7 @@ export default function ChatWidget({
                   <div className={`chat-bubble ${msg.role}`}>
                     {msg.role === 'assistant' ? (
                       <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
                         components={{
                           table: ({ children }) => (
                             <div className="chat-table-wrap">

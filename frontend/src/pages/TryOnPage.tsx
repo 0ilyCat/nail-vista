@@ -1,11 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, Upload, Button, Select, Spin, message, Empty, Typography, Tooltip } from 'antd';
+import { Card, Upload, Button, Select, Spin, message, Empty, Tooltip } from 'antd';
 import { UploadOutlined, ExperimentOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { uploadHand, startTryOn, getStyles, getHandImages, HandInfo, NailStyleItem, TryOnResult } from '../services/api';
 import FloatingAskButton from '../components/common/FloatingAskButton';
-
-const { Text } = Typography;
 
 export default function TryOnPage() {
   const [searchParams] = useSearchParams();
@@ -22,7 +20,6 @@ export default function TryOnPage() {
   const [tryonLoading, setTryonLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const resultRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -62,7 +59,6 @@ export default function TryOnPage() {
       const res = await startTryOn(handId, selectedStyle);
       setResult(res);
       message.success(`试戴完成！(${res.source}, ${res.duration_ms}ms)`);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 200);
     } catch (e: any) {
       message.error(e?.response?.data?.detail || '处理失败');
     } finally { setTryonLoading(false); }
@@ -76,27 +72,23 @@ export default function TryOnPage() {
   };
 
   const selectedStyleObj = styles.find(s => s.id === selectedStyle);
-  const COL_WIDTH = '1fr';
 
   return (
     <div>
-      {/* Three-column equal-width layout */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(3, ${COL_WIDTH})`,
-        gap: 'var(--space-lg)',
-        marginBottom: 'var(--space-2xl)',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 'var(--space-md)',
+        marginBottom: 0,
       }}>
         {/* Column 1: Hand Photo */}
         <Card
-          className="gradient-border-subtle"
           title={<span style={{ fontWeight: 600 }}>① 选择手部照片</span>}
           extra={handPreview && <Button size="small" icon={<ReloadOutlined />} onClick={handleReset}>重选</Button>}
         >
-          {/* Large preview */}
-          <div className={`preview-area-gradient ${handPreview ? 'has-image' : ''}`} style={{ marginBottom: 12 }}>
+          <div className={`preview-area-gradient ${handPreview ? 'has-image' : ''}`} style={{ marginBottom: 8 }}>
             {handPreview ? (
-              <img src={handPreview} alt="已选手图" />
+              <img src={handPreview} alt="手图" />
             ) : (
               <div className="preview-placeholder">
                 <UploadOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
@@ -105,43 +97,38 @@ export default function TryOnPage() {
             )}
           </div>
 
-          {/* Upload */}
           <Upload.Dragger
-            accept="image/*"
-            showUploadList={false}
-            beforeUpload={handleUpload}
+            accept="image/*" showUploadList={false} beforeUpload={handleUpload}
             disabled={uploadLoading}
-            style={{ padding: '8px 0', marginBottom: 12 }}
+            style={{ padding: '6px 0', marginBottom: 8 }}
           >
             {uploadLoading ? <Spin /> : (
               <div>
-                <UploadOutlined style={{ fontSize: 18, color: 'var(--primary)' }} />
+                <UploadOutlined style={{ fontSize: 16, color: 'var(--primary)' }} />
                 <p style={{ marginTop: 2, fontSize: 12 }}>点击/拖拽上传新照片</p>
               </div>
             )}
           </Upload.Dragger>
 
-          {/* History thumbnails */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
             <HistoryOutlined style={{ marginRight: 4 }} />
             历史记录 ({handImages.length})
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {handImages.map(h => (
-              <Tooltip key={h.id} title={h.name} placement="top">
+              <Tooltip key={h.id} title={h.name}>
                 <div onClick={() => handleSelectHand(h)} style={{
                   width: 56, height: 56, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
                   border: handId === h.id ? '2px solid var(--primary)' : '2px solid var(--border)',
                   boxShadow: handId === h.id ? '0 0 0 2px var(--primary-glow)' : 'none',
-                  transition: 'all 0.2s var(--ease-out-quart)',
-                  opacity: handId && handId !== h.id ? 0.6 : 1,
+                  transition: 'all 0.2s', opacity: handId && handId !== h.id ? 0.6 : 1,
                 }}>
                   <img src={h.url} alt={h.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               </Tooltip>
             ))}
             {handImages.length === 0 && !loading && (
-              <div style={{ width: '100%', textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 12 }}>
+              <div style={{ width: '100%', textAlign: 'center', padding: 8, color: 'var(--text-muted)', fontSize: 12 }}>
                 暂无记录
               </div>
             )}
@@ -149,12 +136,8 @@ export default function TryOnPage() {
         </Card>
 
         {/* Column 2: Nail Style */}
-        <Card
-          className="gradient-border-subtle"
-          title={<span style={{ fontWeight: 600 }}>② 选择美甲款式</span>}
-        >
-          {/* Large preview */}
-          <div className={`preview-area-gradient ${selectedStyleObj ? 'has-image' : ''}`} style={{ marginBottom: 12 }}>
+        <Card title={<span style={{ fontWeight: 600 }}>② 选择美甲款式</span>}>
+          <div className={`preview-area-gradient ${selectedStyleObj ? 'has-image' : ''}`} style={{ marginBottom: 8 }}>
             {selectedStyleObj ? (
               selectedStyleObj.local_url ? (
                 <img src={selectedStyleObj.local_url} alt={selectedStyleObj.name} />
@@ -175,13 +158,10 @@ export default function TryOnPage() {
             )}
           </div>
 
-          {/* Search & swatches */}
           <Select
-            showSearch
-            placeholder="搜索款式..."
-            style={{ width: '100%', marginBottom: 12 }}
-            value={selectedStyle}
-            onChange={setSelectedStyle}
+            showSearch placeholder="搜索款式..."
+            style={{ width: '100%', marginBottom: 8 }}
+            value={selectedStyle} onChange={setSelectedStyle}
             filterOption={(input, option) => (option?.label as string || '').includes(input)}
             options={styles.map(s => ({ label: s.name, value: s.id }))}
             loading={loading}
@@ -195,7 +175,7 @@ export default function TryOnPage() {
                   width: 56, height: 56, borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                   border: selectedStyle === s.id ? '2px solid var(--primary)' : '2px solid transparent',
                   boxShadow: selectedStyle === s.id ? '0 0 0 2px var(--primary-glow)' : '0 1px 3px rgba(0,0,0,0.08)',
-                  transition: 'all 0.2s var(--ease-out-quart)', position: 'relative',
+                  transition: 'all 0.2s', position: 'relative',
                 }}>
                 {s.local_url ? (
                   <img src={s.local_url} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -212,36 +192,25 @@ export default function TryOnPage() {
             ))}
           </div>
 
-          {/* Try-on CTA */}
           <Button
-            type="primary"
-            icon={<ExperimentOutlined />}
-            onClick={handleTryOn}
-            loading={tryonLoading}
-            block
-            style={{ marginTop: 16, height: 42, fontSize: 14 }}
-            size="large"
+            type="primary" icon={<ExperimentOutlined />} onClick={handleTryOn}
+            loading={tryonLoading} block
+            style={{ marginTop: 12, height: 40, fontSize: 14 }}
             disabled={!handId || !selectedStyle}
           >
-            {tryonLoading ? 'AI 生成中...' : selectedStyleObj ? `试戴「${selectedStyleObj.name}」` : '请选择手图和款式'}
+            {tryonLoading ? 'AI 生成中...' : selectedStyleObj ? `✨ 试戴「${selectedStyleObj.name}」` : '请选择手图和款式'}
           </Button>
         </Card>
 
         {/* Column 3: Result */}
-        <Card
-          className="gradient-border-subtle"
-          title={<span style={{ fontWeight: 600 }}>③ 试戴效果</span>}
-          ref={resultRef as any}
-        >
+        <Card title={<span style={{ fontWeight: 600 }}>③ 试戴效果</span>}>
           {tryonLoading ? (
             <div className="tryon-generating">
               <div className="tryon-generating-canvas">
-                <div className="paint-blob" />
-                <div className="paint-blob" />
-                <div className="paint-blob" />
-                <div className="paint-blob" />
+                <div className="paint-ribbon" /><div className="paint-ribbon" />
+                <div className="paint-ribbon" /><div className="paint-ribbon" />
+                <div className="paint-ribbon" />
               </div>
-              <div className="gen-strokes" />
               <div className="tryon-generating-overlay">
                 <div className="gen-text">✨ AI 正在创作...</div>
                 <div className="gen-sub">正在生成AI试戴效果图</div>
@@ -264,18 +233,15 @@ export default function TryOnPage() {
               </div>
             </div>
           ) : (
-            <Empty
-              description={
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {handPreview ? '点击「开始试戴」查看效果' : '选择手图和款式后查看'}
-                </span>
-              }
-            />
+            <Empty description={
+              <span style={{ color: 'var(--text-muted)' }}>
+                {handPreview ? '点击「开始试戴」查看效果' : '选择手图和款式后查看'}
+              </span>
+            } />
           )}
         </Card>
       </div>
 
-      {/* 悬浮"问问小美"按钮 */}
       <FloatingAskButton />
     </div>
   );
