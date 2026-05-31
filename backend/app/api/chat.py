@@ -231,6 +231,12 @@ async def _stream_chat(
 
                         delta = choices[0].get("delta", {})
 
+                        # Thinking / reasoning_content
+                        thinking_content = delta.get("reasoning_content", "")
+                        if thinking_content:
+                            thinking += thinking_content
+                            yield f"data: {json.dumps({'type': 'thinking', 'content': thinking_content}, ensure_ascii=False)}\n\n"
+
                         # Text content
                         content = delta.get("content", "")
                         if content:
@@ -248,7 +254,13 @@ async def _stream_chat(
 
                                 if tc_id and not current_tool:
                                     current_tool = {"id": tc_id, "name": name, "input": args, "output": ""}
-                                    yield f"data: {json.dumps({'type': 'tool_start', 'id': tc_id, 'name': name, 'description': f'正在调用 {name} ...'}, ensure_ascii=False)}\n\n"
+                                    # Try to parse args for display
+                                    try:
+                                        args_obj = json.loads(args) if args else {}
+                                        args_str = json.dumps(args_obj, ensure_ascii=False)[:200]
+                                    except Exception:
+                                        args_str = args[:200]
+                                    yield f"data: {json.dumps({'type': 'tool_start', 'id': tc_id, 'name': name, 'description': f'正在调用 {name}', 'input': args_str}, ensure_ascii=False)}\n\n"
                                 elif current_tool and args:
                                     current_tool["input"] += args
 

@@ -6,7 +6,7 @@
 <img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white" />
 <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white" />
 <img src="https://img.shields.io/badge/MediaPipe-0.10-FF6F00?style=flat-square&logo=google&logoColor=white" />
-<img src="https://img.shields.io/badge/AI-LongCat_2.0-FF69B4?style=flat-square&logo=openai&logoColor=white" />
+<img src="https://img.shields.io/badge/AI-MiMo_V2.5-FF69B4?style=flat-square&logo=openai&logoColor=white" />
 <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 
 </div>
@@ -15,7 +15,7 @@
 
 > 让用户「所见即所得」，让运营「实时感知趋势」
 
-美团黑马大赛 命题三：美甲评测数据
+智能体开发大赛 · 智能体应用赛道
 
 ---
 
@@ -23,9 +23,9 @@
 
 NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台。
 
-- 👁️ **AI虚拟试戴**：上传手部照片 → 选择美甲款式 → 秒级查看试戴效果
+- 💅 **AI虚拟试戴**：上传手部照片 → 选择美甲款式 → 秒级查看试戴效果
 - 📊 **智能运营看板**：实时热度排行、7日趋势图表、AI自动生成运营日报
-- 🤖 **LongCat AI助手**：自然语言问答、自动生成运营策略、趋势分析报告
+- 🤖 **OpenClaw AI助手**：自然语言问答、自动生成运营策略、趋势分析报告
 
 ---
 
@@ -33,15 +33,15 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
 
 ```
 ┌─────────────────────┐     ┌──────────────────────────┐     ┌─────────────────┐
-│   React 19 + Vite   │────▶│   FastAPI (端口 8190)     │────▶│   SQLite / PG    │
+│   React 19 + Vite   │────▶│   FastAPI (端口 8190)     │────▶│   SQLite        │
 │   端口 4180          │     │                          │     └─────────────────┘
 │                     │     │  /api/styles   款式管理    │
 │  首页               │     │  /api/tryon    试戴引擎    │     ┌─────────────────┐
-│  AI试戴             │     │  /api/analytics 数据分析   │────▶│  LongCat 2.0     │
-│  款式浏览           │     │  /api/operations AI运营    │     │  对话模型        │
+│  AI试戴             │     │  /api/analytics 数据分析   │────▶│  OpenClaw       │
+│  款式浏览           │     │  /api/operations AI运营    │     │  MiMo V2.5     │
 │  运营看板           │     │                          │     └─────────────────┘
 └─────────────────────┘     │  MediaPipe + OpenCV       │
-                            │  百炼 qwen-image-2.0-pro   │
+                            │  百炼 qwen-image-2.0     │
                             └──────────────────────────┘
 ```
 
@@ -52,7 +52,7 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
                                                   ↓
               款式图（透视变换）              →  OpenCV 叠加 + 边缘羽化
                                                   ↓
-              百炼 qwen-image-2.0-pro          →  AI生成结果（自动缓存）
+              百炼 qwen-image-2.0-pro       →  AI生成结果（自动缓存）
 ```
 
 ---
@@ -63,36 +63,134 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
 
 - Python 3.12+（推荐 conda）
 - Node.js 22.16+
-- [百炼 API Key](https://dashscope.console.aliyun.com/)（可选，用于AI图片生成）
+- OpenClaw（本地 AI 引擎）：`npm install -g openclaw`
 
-### 本地开发
+### 第一步：配置 API Key
 
-```bash
-# 1. 后端
-conda create -n nailvista python=3.12 -y && conda activate nailvista
-cd backend
-cp .env.example .env          # 编辑 .env 填入 API Key
-pip install -r requirements.txt
-python import_data.py          # 导入种子数据（25款美甲 + 运营指标）
-uvicorn app.main:app --port 8190 --reload
+**1. 百炼图生模型（可选，用于 AI 试戴图生成）**
 
-# 2. 前端
-cd frontend
-npm install
-npm run dev                    # → http://localhost:4180
-```
-
-### 配置 API Key
-
-编辑 `backend/.env`：
-
+编辑 `backend/.env`（从 `.env.example` 复制）：
 ```env
-# LongCat 对话模型（必填）— https://longcat.chat/platform
-LONGCAT_API_KEY=sk-xxxxxxxxxxxxxxxx
-
-# 百炼图生模型（可选）— https://dashscope.console.aliyun.com/
+# 阿里百炼图生模型 API Key（可选）— https://dashscope.console.aliyun.com/
 DASHSCOPE_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
+
+**2. OpenClaw LLM 配置（必填，用于 AI 对话）**
+
+编辑 `openclaw/openclaw.json`，替换 `env.MIMO_API_KEY` 和 `models.providers.xiaomi-coding.apiKey` 为你的 MiMo Token Plan Key：
+```json
+{
+  "env": {
+    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE"
+  },
+  "models": {
+    "providers": {
+      "xiaomi-coding": {
+        "apiKey": "YOUR_TOKEN_PLAN_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+> 获取 Key：https://token-plan-cn.xiaomimimo.com
+
+**3. OpenClaw Gateway Token（可选）**
+
+`openclaw/openclaw.json` 中的 `gateway.auth.token` 默认为 `nailvista-dev-token`，本地开发无需修改。
+
+---
+
+### 第二步：启动服务
+
+#### 1. 后端启动
+
+```bash
+# 克隆仓库后，进入后端目录
+cd meituan-hackathon/backend
+
+# 从模板复制环境变量文件（仅含 DASHSCOPE_API_KEY）
+cp .env.example .env
+# 编辑 .env，填入你的 DASHSCOPE_API_KEY（可选）
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 导入种子数据（25款美甲 + 运营指标）
+python import_data.py
+
+# 启动后端（端口 8190）
+uvicorn app.main:app --port 8190 --reload
+```
+
+#### 2. 前端启动（新终端）
+
+```bash
+# 进入前端目录
+cd meituan-hackathon/frontend
+
+# 安装依赖
+npm install
+
+# 启动前端（端口 4180）
+npm run dev
+```
+
+#### 3. OpenClaw Gateway 启动（新终端）
+
+```bash
+# 进入项目主目录
+cd meituan-hackathon
+
+# 设置 OpenClaw 配置文件路径
+set OPENCLAW_CONFIG_PATH=openclaw/openclaw.json
+
+# 启动 OpenClaw Gateway（端口 18789）
+openclaw gateway run --port 18789
+```
+
+---
+
+### 第三步：验证启动成功
+
+```bash
+# 后端健康检查
+curl http://localhost:8190/api/styles   # 返回款式列表
+
+# 前端页面
+# 浏览器访问 http://localhost:4180
+
+# OpenClaw 状态
+curl http://localhost:18789/health        # 返回 {"ok":true,"status":"live"}
+```
+
+---
+
+### 配置说明（统一配置，无冗余）
+
+| 配置项 | 存放位置 | 说明 |
+|---------|----------|------|
+| 百炼 API Key（图像生成） | `backend/.env` | 仅此处配置，无其他冗余 |
+| OpenClaw 配置（MiMo Key、模型、Agent） | `openclaw/openclaw.json` | 所有 LLM 配置集中管理，支持多模型 |
+| 数据库配置 | `backend/.env` | 可选，默认 SQLite 零配置 |
+
+#### 如何配置其他语言模型？
+
+编辑 `openclaw/openclaw.json` 中的 `models.providers`，添加对应模型：
+```json
+"models": {
+  "mode": "merge",
+  "providers": {
+    "openai": {
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "your-openai-key",
+      "models": [{"id": "gpt-4", "name": "GPT-4"}]
+    }
+  }
+}
+```
+
+---
 
 ### 批量生成AI试戴图（可选）
 
@@ -127,7 +225,7 @@ docker compose up -d --build
 | `GET` | `/api/styles/hot/ranking` | 热门排行（按热度分） |
 | `GET` | `/api/analytics/overview` | 运营总览数据 |
 | `GET` | `/api/analytics/trends` | N日趋势数据 |
-| `POST` | `/api/operations/chat` | AI助手对话（LongCat） |
+| `POST` | `/api/operations/chat` | AI助手对话（OpenClaw + MiMo） |
 | `POST` | `/api/operations/reports/generate` | 生成日报/趋势/策略报告 |
 
 完整 Swagger 文档：`http://localhost:8190/docs`
@@ -150,11 +248,13 @@ nail-vista/
 │   │   ├── api/                    # 试戴/款式/分析/运营
 │   │   ├── core/                   # 配置/数据库
 │   │   ├── models/                 # SQLAlchemy 模型（6张表）
-│   │   └── services/               # 试戴引擎/百炼服务/LongCat服务/趋势分析
+│   │   └── services/               # 试戴引擎/百炼服务/趋势分析
 │   ├── batch_generate.py           # 批量AI生图脚本
 │   ├── import_data.py              # 数据种子脚本
-│   ├── .env.example                # 配置文件模板
+│   ├── .env.example                # 配置文件模板（仅 DASHSCOPE_API_KEY）
 │   └── requirements.txt
+├── openclaw/
+│   └── openclaw.json              # OpenClaw 配置（LLM Key、Agent、Gateway）
 ├── docker-compose.yml              # Docker 一键部署
 ├── PLAN.md                         # 完整项目规划
 └── README.md
@@ -199,7 +299,7 @@ hand_01 + style_05 → results/hand_01+style_05.png
 ### 智能运营
 
 - **热度分算法**：`试戴×0.4 + 收藏×0.25 + 浏览×0.2 + 分享×0.1 + 时长加成`
-- **LongCat AI**：实时对话、日报生成、趋势分析、策略推荐
+- **OpenClaw AI**：实时对话、日报生成、趋势分析、策略推荐（支持 MiMo V2.5 及其他模型）
 
 ---
 
@@ -207,11 +307,12 @@ hand_01 + style_05 → results/hand_01+style_05.png
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `LONGCAT_API_KEY` | LongCat 对话模型 Key | 必填 |
-| `DASHSCOPE_API_KEY` | 阿里百炼图生模型 Key | 可选 |
+| `DASHSCOPE_API_KEY` | 阿里百炼图生模型 Key（可选） | 空 |
 | `USE_POSTGRES` | 使用 PostgreSQL | `false` |
 | `DATABASE_URL` | 自定义数据库连接 | 自动生成 |
 | `DEBUG` | 调试模式 | `true` |
+
+> OpenClaw 相关配置全部在 `openclaw/openclaw.json` 中管理，无需在 `.env` 重复填写。
 
 ---
 
@@ -220,7 +321,7 @@ hand_01 + style_05 → results/hand_01+style_05.png
 - [x] Phase 1：环境搭建与项目初始化
 - [x] Phase 2：数据层与基础 API
 - [x] Phase 3：AI试戴模块（MediaPipe + OpenCV）
-- [x] Phase 4：智能运营模块（LongCat AI）
+- [x] Phase 4：智能运营模块（OpenClaw + MiMo）
 - [x] Phase 5：联调展示与文档
 
 ---
@@ -232,5 +333,5 @@ MIT © 2026
 ---
 
 <div align="center">
-<sub>Built with 💅 by 0ilyCat · Powered by LongCat & Bailian AI</sub>
+<sub>Built with 💅 by 龙猫队 · Powered by OpenClaw & 百炼 AI</sub>
 </div>

@@ -199,6 +199,8 @@ export default function ChatWidget({
                   status: 'running',
                 };
                 toolCalls.push(tc);
+                // Also store input for display
+                (tc as any).input = event.input || '';
                 setMessages(prev => {
                   const updated = [...prev];
                   const last = updated[updated.length - 1];
@@ -337,8 +339,21 @@ export default function ChatWidget({
                   {tc.description}
                   {expandedTools.has(tc.id) ? <DownOutlined style={{ fontSize: 10, marginLeft: 'auto' }} /> : <RightOutlined style={{ fontSize: 10, marginLeft: 'auto' }} />}
                 </div>
-                {expandedTools.has(tc.id) && tc.result && (
-                  <div className="tool-call-body">{tc.result}</div>
+                {expandedTools.has(tc.id) && (
+                  <div className="tool-call-body">
+                    {(tc as any).input && (
+                      <div style={{ marginBottom: 6 }}>
+                        <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>输入参数：</div>
+                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, background: '#f5f5f5', padding: 6, borderRadius: 4 }}>{(tc as any).input}</pre>
+                      </div>
+                    )}
+                    {tc.result && (
+                      <div>
+                        <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>返回结果：</div>
+                        <div>{tc.result}</div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
