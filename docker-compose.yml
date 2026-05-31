@@ -25,14 +25,18 @@ services:
       - "8190:8190"
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/nail_tryon
-      LONGCAT_API_KEY: ${LONGCAT_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
       DEBUG: "false"
     depends_on:
       db:
         condition: service_healthy
     volumes:
+      - ./openclaw:/app/openclaw:ro
       - uploads:/app/uploads
       - results:/app/results
+    command: >
+      sh -c "OPENCLAW_HOME=/app openclaw gateway run --port 18789 &
+             uvicorn app.main:app --host 0.0.0.0 --port 8190 --reload"
 
   frontend:
     build:

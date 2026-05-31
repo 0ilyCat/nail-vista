@@ -138,12 +138,23 @@ npm run dev
 
 #### 3. OpenClaw Gateway 启动（新终端）
 
-```bash
-# 进入项目主目录
+**Windows（PowerShell）：**
+```powershell
 cd meituan-hackathon
+.\start-openclaw.ps1
+```
 
-# 设置 OpenClaw 配置文件路径
-set OPENCLAW_CONFIG_PATH=openclaw/openclaw.json
+**Linux / macOS（Bash）：**
+```bash
+cd meituan-hackathon
+bash start-openclaw.sh
+```
+
+**手动启动（任意平台）：**
+```bash
+# 设置项目目录（让 OpenClaw 读取项目内的 .openclaw/ 配置）
+export OPENCLAW_HOME=/path/to/meituan-hackathon   # Linux/macOS
+set OPENCLAW_HOME=C:\path\to\meituan-hackathon      # Windows CMD
 
 # 启动 OpenClaw Gateway（端口 18789）
 openclaw gateway run --port 18789
