@@ -1,24 +1,40 @@
-node_modules/
-dist/
-.env
-__pycache__/
-*.pyc
-.venv/
-uploads/
-results/
-*.egg-info/
-.DS_Store
-*.db
-test_setup.py
-backend/static/
-
-# OpenClaw runtime state (configs & skills are committed, state is not)
-openclaw/agents/*/state/
-
-# OpenClaw config with API keys (仅 .example 模板提交)
-openclaw/openclaw.json
-openclaw/openclaw.json.last-good
-
 # Build output artifacts (PPT/Report/screenshots — not versioned)
 output/
+screenshots/
 .playwright-cli/
+
+# WorkBuddy & CLI runtime state (not versioned)
+.workbuddy/
+.cli/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env & secrets
+.env
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenClaw runtime state (configs & skills are committed, state is not)
+openclaw/openclaw.json
+openclaw/openclaw.json.last-good
+openclaw/agents/*/state/
+openclaw/logs/
+openclaw/tasks/
+
+# Temp files
+*.log
+*.tmp
+*~
