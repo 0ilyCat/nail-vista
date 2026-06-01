@@ -3,6 +3,11 @@ output/
 screenshots/
 .playwright-cli/
 
+# Backend runtime data (generated files, not source)
+backend/results/
+backend/static/
+backend/uploads/
+
 # WorkBuddy & CLI runtime state (not versioned)
 .workbuddy/
 .cli/
