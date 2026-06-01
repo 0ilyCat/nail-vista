@@ -27,12 +27,37 @@ dist/
 .DS_Store
 Thumbs.db
 
-# OpenClaw runtime state (configs & skills are committed, state is not)
-openclaw/openclaw.json
-openclaw/openclaw.json.last-good
-openclaw/agents/*/state/
-openclaw/logs/
-openclaw/tasks/
+# ─── OpenClaw 项目内配置 (仅运行时状态忽略，配置文件提交) ───
+
+# 运行时日志
+.openclaw/logs/
+
+# 运行时 workspace（agent 工作目录）
+.openclaw/workspace/
+
+# 设备身份与配对（私密，每人独有）
+.openclaw/identity/
+.openclaw/devices/
+
+# Agent 运行时状态
+.openclaw/agents/*/state/
+.openclaw/agents/*/sessions/
+.openclaw/agents/*/.openclaw/
+
+# 自动创建的 Agent 会话目录
+.openclaw/agents/nailvista-xiaomei/
+
+# 插件安装缓存
+.openclaw/plugins/
+
+# 任务调度数据库（运行时）
+.openclaw/tasks/
+
+# 配置回滚文件（运行时自动备份，非源文件）
+.openclaw/openclaw.json.last-good
+
+# 版本检查缓存
+.openclaw/update-check.json
 
 # Temp files
 *.log

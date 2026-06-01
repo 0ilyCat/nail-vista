@@ -67,7 +67,21 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
 
 ### 第一步：配置 API Key
 
-**1. 百炼图生模型（可选，用于 AI 试戴图生成）**
+**1. OpenClaw LLM API Key（必填，用于 AI 对话）**
+
+编辑 `.openclaw/openclaw.json`，替换 `env.MIMO_API_KEY` 为你的 MiMo Token Plan Key：
+
+```json
+{
+  "env": {
+    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE"
+  }
+}
+```
+
+> 获取 Key：https://token-plan-cn.xiaomimimo.com
+
+**2. 百炼图生模型（可选，用于 AI 试戴图生成）**
 
 编辑 `backend/.env`（从 `.env.example` 复制）：
 ```env
@@ -75,29 +89,9 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
 DASHSCOPE_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-**2. OpenClaw LLM 配置（必填，用于 AI 对话）**
+**3. OpenClaw Gateway Token（无需配置）**
 
-编辑 `openclaw/openclaw.json`，替换 `env.MIMO_API_KEY` 和 `models.providers.xiaomi-coding.apiKey` 为你的 MiMo Token Plan Key：
-```json
-{
-  "env": {
-    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE"
-  },
-  "models": {
-    "providers": {
-      "xiaomi-coding": {
-        "apiKey": "YOUR_TOKEN_PLAN_KEY_HERE"
-      }
-    }
-  }
-}
-```
-
-> 获取 Key：https://token-plan-cn.xiaomimimo.com
-
-**3. OpenClaw Gateway Token（可选）**
-
-`openclaw/openclaw.json` 中的 `gateway.auth.token` 默认为 `nailvista-dev-token`，本地开发无需修改。
+`.openclaw/openclaw.json` 中 `gateway.auth.token` 通过 `${OPENCLAW_GATEWAY_TOKEN}` 引用 `env` 段的 `nailvista-dev-token`，本地开发无需修改。
 
 ---
 
@@ -152,11 +146,13 @@ bash start-openclaw.sh
 
 **手动启动（任意平台）：**
 ```bash
-# 设置项目目录（让 OpenClaw 读取项目内的 .openclaw/ 配置）
-export OPENCLAW_HOME=/path/to/meituan-hackathon   # Linux/macOS
-set OPENCLAW_HOME=C:\path\to\meituan-hackathon      # Windows CMD
+# 1. 设置项目目录（让 OpenClaw 读取 .openclaw/ 下的配置）
+# Windows PowerShell:
+$env:OPENCLAW_HOME = 'C:\path\to\meituan-hackathon'
+# Linux / macOS:
+export OPENCLAW_HOME=/path/to/meituan-hackathon
 
-# 启动 OpenClaw Gateway（端口 18789）
+# 2. 启动 OpenClaw Gateway（端口 18789）
 openclaw gateway run --port 18789
 ```
 
@@ -177,17 +173,57 @@ curl http://localhost:18789/health        # 返回 {"ok":true,"status":"live"}
 
 ---
 
-### 配置说明（统一配置，无冗余）
+### 配置说明（项目内自包含，无隐式依赖）
 
 | 配置项 | 存放位置 | 说明 |
 |---------|----------|------|
-| 百炼 API Key（图像生成） | `backend/.env` | 仅此处配置，无其他冗余 |
-| OpenClaw 配置（MiMo Key、模型、Agent） | `openclaw/openclaw.json` | 所有 LLM 配置集中管理，支持多模型 |
+| OpenClaw 配置（模型、Agent、Gateway、API Key） | `.openclaw/openclaw.json` | 提交到仓库，`env` 段自包含 API Key；直接用文本编辑器修改 |
+| OpenClaw Agent 定义（小美/运营助手） | `.openclaw/agents/` | 提交到仓库，含 SOUL.md、SKILL.md 等 |
+| OpenClaw 配置模板 | `.openclaw/openclaw.json.example` | 提交到仓库，队友可参考 |
+| 百炼 API Key（图像生成） | `backend/.env` | `.env` 不提交，从 `.env.example` 复制后填写 |
 | 数据库配置 | `backend/.env` | 可选，默认 SQLite 零配置 |
+
+> OpenClaw 的所有配置（含 API Key）均在 `.openclaw/openclaw.json` 的 `env` 段中自包含管理，通过 `${MIMO_API_KEY}` 内部引用，不依赖操作系统环境变量。仅 DASHSCOPE_API_KEY 需要从 `backend/.env` 读取。
+
+#### OpenClaw 项目目录结构（`.openclaw/`）
+
+```
+.openclaw/
+├─ agents/                   ← Agent 定义（提交）
+│  ├─ xiaomei/               ← 小美：SOUL.md + 4 skills
+│  └─ ops/                   ← 运营助手：SOUL.md + 5 skills
+├─ plugin-skills/            ← 共享插件技能（提交）
+├─ openclaw.json             ← 主配置（提交，密钥通过环境变量注入）
+├─ openclaw.json.example     ← 配置模板（提交）
+│
+├─ workspace/                ← Agent 运行时工作目录（忽略）
+├─ logs/                     ← 运行时日志（忽略）
+├─ identity/                 ← 设备身份（忽略，每人独有）
+├─ devices/                  ← 设备配对（忽略）
+├─ tasks/                    ← 任务调度数据库（忽略）
+├─ plugins/                  ← 插件缓存（忽略）
+└─ openclaw.json.last-good   ← 自动备份（忽略）
+```
+
+| 类别 | 文件/目录 | 是否提交 |
+|------|-----------|----------|
+| 提交 | `.openclaw/openclaw.json` | 是 — 主配置，`env` 段自包含 API Key + Gateway Token |
+| 提交 | `.openclaw/openclaw.json.example` | 是 — 配置参考模板 |
+| 提交 | `.openclaw/agents/*/AGENTS.md` `SOUL.md` `IDENTITY.md` `TOOLS.md` `USER.md` `HEARTBEAT.md` `skills/` | 是 — Agent 定义与技能 |
+| 提交 | `.openclaw/plugin-skills/` | 是 — 共享插件技能 |
+| 忽略 | `.openclaw/agents/*/state/` | 否 — 运行时模型状态 |
+| 忽略 | `.openclaw/agents/*/sessions/` | 否 — Agent 会话记录 |
+| 忽略 | `.openclaw/workspace/` | 否 — Agent 运行时工作目录 |
+| 忽略 | `.openclaw/logs/` | 否 — 运行时日志 |
+| 忽略 | `.openclaw/identity/` | 否 — 设备身份（私密） |
+| 忽略 | `.openclaw/devices/` | 否 — 设备配对信息（私密） |
+| 忽略 | `.openclaw/tasks/` | 否 — 任务调度数据库 |
+| 忽略 | `.openclaw/plugins/` | 否 — 插件安装缓存 |
+| 忽略 | `.openclaw/openclaw.json.last-good` | 否 — 运行时自动备份，非源文件 |
 
 #### 如何配置其他语言模型？
 
-编辑 `openclaw/openclaw.json` 中的 `models.providers`，添加对应模型：
+编辑 `.openclaw/openclaw.json` 中的 `models.providers`，添加对应模型：
 ```json
 "models": {
   "mode": "merge",
@@ -264,8 +300,10 @@ nail-vista/
 │   ├── import_data.py              # 数据种子脚本
 │   ├── .env.example                # 配置文件模板（仅 DASHSCOPE_API_KEY）
 │   └── requirements.txt
-├── openclaw/
-│   └── openclaw.json              # OpenClaw 配置（LLM Key、Agent、Gateway）
+├── .openclaw/                     # OpenClaw 项目内配置（自包含，提交到仓库）
+│   ├── agents/                    # Agent 定义：xiaomei + ops
+│   ├── openclaw.json              # 主配置文件（密钥通过环境变量注入）
+│   └── openclaw.json.example      # 配置模板
 ├── docker-compose.yml              # Docker 一键部署
 ├── PLAN.md                         # 完整项目规划
 └── README.md
@@ -323,7 +361,7 @@ hand_01 + style_05 → results/hand_01+style_05.png
 | `DATABASE_URL` | 自定义数据库连接 | 自动生成 |
 | `DEBUG` | 调试模式 | `true` |
 
-> OpenClaw 相关配置全部在 `openclaw/openclaw.json` 中管理，无需在 `.env` 重复填写。
+> OpenClaw 所有配置（含 API Key）均在 `.openclaw/openclaw.json` 中管理，无需设置操作系统环境变量。
 
 ---
 

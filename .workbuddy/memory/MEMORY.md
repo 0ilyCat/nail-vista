@@ -27,11 +27,18 @@
 - 中文交流, 先方案不实施, 表格式呈现
 - 非标准端口避冲突, AI主动检查环境状态
 
-## OpenClaw
-- 项目配置: `openclaw/openclaw.json`
-- 启动: `cd D:/projects/myproject/meituan-hackathon && set MIMO_API_KEY=xxx && set OPENCLAW_CONFIG_PATH=openclaw/openclaw.json && openclaw gateway run --port 18789`
-- Agent: nailvista-xiaomei (小美), nailvista-ops (运营助手)
-- API: `POST /v1/chat/completions` (需 `gateway.http.endpoints.chatCompletions.enabled: true`)
+## OpenClaw（项目内自包含配置）
+- 配置根目录: `.openclaw/`（提交到仓库，不依赖用户目录）
+- 主配置: `.openclaw/openclaw.json`（通过 `${MIMO_API_KEY}` 读取 OS 环境变量，无硬编码密钥）
+- 配置模板: `.openclaw/openclaw.json.example`
+- Agent 定义: `.openclaw/agents/xiaomei/`（小美，4 skills）、`.openclaw/agents/ops/`（运营助手，5 skills）
+- 启动: `.\start-openclaw.ps1`（自动设置 OPENCLAW_HOME，检查 MIMO_API_KEY，创建运行时目录）
+- Agent: nailvista-xiaomei（小美）, nailvista-ops（运营助手）
+- 模型: xiaomi-coding/mimo-v2.5-pro（主力）、xiaomi-coding/mimo-v2.5（视觉）
+- 弃用: mimo-v2-omni 已移除
+- gateway token: `nailvista-dev-token`（开发环境无需修改）
+- 运行时目录（全部 gitignore）: workspace/、logs/、identity/、devices/、tasks/、plugins/、agents/*/state/
+- 配置目录（提交）: agents/、plugin-skills/、openclaw.json、openclaw.json.example
 
 ## 前端开发
 - 安装依赖: `cd frontend && npm install`

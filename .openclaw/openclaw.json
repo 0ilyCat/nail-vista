@@ -1,6 +1,6 @@
 {
   "env": {
-    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE",
+    "MIMO_API_KEY": "tp-ck77z6dfpe4biuktho9ps97wjo8dpn6fq41rtzcekflz7dbs",
     "OPENCLAW_GATEWAY_TOKEN": "nailvista-dev-token"
   },
   "models": {
