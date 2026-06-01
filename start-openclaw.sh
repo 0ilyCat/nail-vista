@@ -22,8 +22,6 @@ echo "OPENCLAW_HOME: $OPENCLAW_HOME"
 
 # ── 3. 确保运行时目录结构存在（不覆盖已有配置） ──
 OPENCLAW_DIR="$SCRIPT_DIR/.openclaw"
-mkdir -p "$OPENCLAW_DIR/workspace/xiaomei"
-mkdir -p "$OPENCLAW_DIR/workspace/ops"
 mkdir -p "$OPENCLAW_DIR/logs"
 mkdir -p "$OPENCLAW_DIR/plugin-skills"
 

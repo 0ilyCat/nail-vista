@@ -36,8 +36,6 @@ Write-Host "OPENCLAW_HOME: $env:OPENCLAW_HOME"
 # ============================================================
 $OpenClawDir = Join-Path $ProjectRoot ".openclaw"
 $DirsToCreate = @(
-    "$OpenClawDir\workspace\xiaomei",
-    "$OpenClawDir\workspace\ops",
     "$OpenClawDir\logs",
     "$OpenClawDir\plugin-skills"
 )
