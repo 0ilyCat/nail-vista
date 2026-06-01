@@ -4,8 +4,10 @@ screenshots/
 .playwright-cli/
 
 # Backend runtime data
-backend/results/                   # AI 生成的试戴结果图（运行时产生，不提交）
-backend/uploads/.upload_counter    # 上传计数器（运行时状态）
+# AI 生成的试戴结果图（运行时产生，不提交）
+backend/results/
+# 上传计数器（运行时状态）
+backend/uploads/.upload_counter
 
 # WorkBuddy & CLI runtime state (not versioned)
 .workbuddy/
