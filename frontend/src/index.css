@@ -650,6 +650,90 @@ body {
   background: oklch(97% 0.01 12);
 }
 
+/* ── Session sidebar ── */
+.history-toggle-btn,
+.new-chat-btn {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+.history-toggle-btn:hover,
+.new-chat-btn:hover {
+  color: var(--primary);
+  border-color: var(--border-light);
+  background: #fff;
+}
+.session-sidebar {
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-alt);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.session-sidebar-header {
+  padding: 10px var(--space-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.session-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ccc;
+  padding: 2px;
+}
+.session-close-btn:hover { color: #666; }
+.session-list { padding: 0 var(--space-md) var(--space-sm); }
+.session-empty {
+  text-align: center;
+  color: #ccc;
+  font-size: 12px;
+  padding: var(--space-md) 0;
+}
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+.session-item:hover {
+  background: oklch(97% 0.01 12);
+  color: var(--text-primary);
+}
+.session-item.active {
+  background: oklch(95% 0.02 12);
+  color: var(--primary);
+  font-weight: 500;
+}
+.session-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-time {
+  font-size: 11px;
+  color: #bbb;
+  flex-shrink: 0;
+}
+
 /* Gradient backgrounds */
 .gradient-pink {
   background: linear-gradient(135deg, oklch(52% 0.13 12), oklch(40% 0.15 350));
