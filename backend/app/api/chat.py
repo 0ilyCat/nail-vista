@@ -136,6 +136,12 @@ async def _stream_chat(
     session = await _get_or_create_session(db, session_key, agent_type)
     await _save_message(db, session.id, "user", message)
 
+    # Auto-title: use first user message as session title
+    if session.title == "新对话":
+        title_text = message.replace("\n", " ").strip()[:30]
+        session.title = title_text if title_text else "新对话"
+        await db.commit()
+
     # ── Skill detection & execution ──
     skill = await detect_skill(message, agent_type)
     skill_context = ""
@@ -291,6 +297,10 @@ async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     """用户侧聊天（非流式，返回完整回复）"""
     session = await _get_or_create_session(db, req.session_key, "user")
     await _save_message(db, session.id, "user", req.message)
+    if session.title == "新对话":
+        title_text = req.message.replace("\n", " ").strip()[:30]
+        session.title = title_text if title_text else "新对话"
+        await db.commit()
 
     agent_id, model_name = _map_agent("user")
     history = await _get_history(db, session.id)
@@ -362,6 +372,10 @@ async def chat_dashboard(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     """运营侧聊天（非流式）"""
     session = await _get_or_create_session(db, req.session_key, "dashboard")
     await _save_message(db, session.id, "user", req.message)
+    if session.title == "新对话":
+        title_text = req.message.replace("\n", " ").strip()[:30]
+        session.title = title_text if title_text else "新对话"
+        await db.commit()
 
     agent_id, model_name = _map_agent("dashboard")
     history = await _get_history(db, session.id)

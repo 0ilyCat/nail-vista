@@ -58,7 +58,8 @@ class Settings(BaseSettings):
                 raw = f.read()
             # 移除 JSON 不支持的行注释
             import re
-            raw = re.sub(r'//.*', '', raw)
+            # 仅移除整行注释（以空白开头后跟 // 的行）
+            raw = re.sub(r'^\s*//.*$', '', raw, flags=re.MULTILINE)
             oc = json.loads(raw)
 
             # 读取 env 段中的变量定义
