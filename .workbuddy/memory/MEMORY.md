@@ -28,17 +28,17 @@
 - 非标准端口避冲突, AI主动检查环境状态
 
 ## OpenClaw（项目内自包含配置）
-- 配置根目录: `.openclaw/`（提交到仓库，不依赖用户目录）
-- 主配置: `.openclaw/openclaw.json`（通过 `${MIMO_API_KEY}` 读取 OS 环境变量，无硬编码密钥）
+- 配置根目录: `.openclaw/`（提交到仓库，不依赖用户目录或 OS 环境变量）
+- 主配置: `.openclaw/openclaw.json`（`env` 段自包含 MIMO_API_KEY + Gateway Token，通过 `${VAR}` 内部引用）
 - 配置模板: `.openclaw/openclaw.json.example`
 - Agent 定义: `.openclaw/agents/xiaomei/`（小美，4 skills）、`.openclaw/agents/ops/`（运营助手，5 skills）
-- 启动: `.\start-openclaw.ps1`（自动设置 OPENCLAW_HOME，检查 MIMO_API_KEY，创建运行时目录）
+- 启动: `.\start-openclaw.ps1` 或 `bash start-openclaw.sh`（仅设 OPENCLAW_HOME + 创建目录 + 启动，无需额外环境变量）
 - Agent: nailvista-xiaomei（小美）, nailvista-ops（运营助手）
-- 模型: xiaomi-coding/mimo-v2.5-pro（主力）、xiaomi-coding/mimo-v2.5（视觉）
-- 弃用: mimo-v2-omni 已移除
-- gateway token: `nailvista-dev-token`（开发环境无需修改）
+- 模型: xiaomi-coding/mimo-v2.5-pro（主力）、xiaomi-coding/mimo-v2.5（视觉）；mimo-v2-omni 已弃用
+- Gateway token: `nailvista-dev-token`（env 段自包含）
 - 运行时目录（全部 gitignore）: workspace/、logs/、identity/、devices/、tasks/、plugins/、agents/*/state/
 - 配置目录（提交）: agents/、plugin-skills/、openclaw.json、openclaw.json.example
+- 仅 DASHSCOPE_API_KEY 需在 backend/.env 中设置
 
 ## 前端开发
 - 安装依赖: `cd frontend && npm install`

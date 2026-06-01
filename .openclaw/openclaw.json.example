@@ -43,13 +43,13 @@
     },
     "list": [
       {
-        "id": "nailvista-xiaomei",
+        "id": "xiaomei",
         "name": "小美",
         "workspace": ".openclaw/workspace/xiaomei",
         "agentDir": ".openclaw/agents/xiaomei/state"
       },
       {
-        "id": "nailvista-ops",
+        "id": "ops",
         "name": "运营助手",
         "workspace": ".openclaw/workspace/ops",
         "agentDir": ".openclaw/agents/ops/state"

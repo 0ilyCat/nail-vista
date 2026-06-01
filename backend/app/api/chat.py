@@ -56,10 +56,10 @@ class TaskResponse(BaseModel):
 # ──────────────────────── Helpers ────────────────────────
 
 def _map_agent(agent_type: str) -> tuple[str, str]:
-    """Map frontend agent_type to OpenClaw model ID"""
+    """Map frontend agent_type to OpenClaw agent ID"""
     if agent_type == "user":
-        return "nailvista-xiaomei", "openclaw/nailvista-xiaomei"
-    return "nailvista-ops", "openclaw/nailvista-ops"
+        return "xiaomei", "openclaw/xiaomei"
+    return "ops", "openclaw/ops"
 
 
 async def _get_or_create_session(
