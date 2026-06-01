@@ -45,13 +45,13 @@
       {
         "id": "xiaomei",
         "name": "小美",
-        "workspace": ".openclaw/workspace/xiaomei",
+        "workspace": ".openclaw/agents/xiaomei",
         "agentDir": ".openclaw/agents/xiaomei/state"
       },
       {
         "id": "ops",
         "name": "运营助手",
-        "workspace": ".openclaw/workspace/ops",
+        "workspace": ".openclaw/agents/ops",
         "agentDir": ".openclaw/agents/ops/state"
       }
     ]

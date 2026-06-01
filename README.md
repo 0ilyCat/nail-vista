@@ -193,14 +193,14 @@ curl http://localhost:18789/health        # 返回 {"ok":true,"status":"live"}
 
 ```
 .openclaw/
-├─ agents/                   ← Agent 定义（提交）
-│  ├─ xiaomei/               ← 小美：SOUL.md + 4 skills
-│  └─ ops/                   ← 运营助手：SOUL.md + 5 skills
+├─ agents/                   ← Agent 定义（提交，也是 agent 的 workspace）
+│  ├─ xiaomei/               ← 小美：SOUL.md + 4 skills（workspace 指向此处）
+│  └─ ops/                   ← 运营助手：SOUL.md + 5 skills（workspace 指向此处）
 ├─ plugin-skills/            ← 共享插件技能（提交）
-├─ openclaw.json             ← 主配置（提交，密钥通过环境变量注入）
+├─ openclaw.json             ← 主配置（提交，env 段自包含密钥）
 ├─ openclaw.json.example     ← 配置模板（提交）
 │
-├─ workspace/                ← Agent 运行时工作目录（忽略）
+├─ workspace/                ← 全局运行时目录（忽略，agent 不再使用）
 ├─ logs/                     ← 运行时日志（忽略）
 ├─ identity/                 ← 设备身份（忽略，每人独有）
 ├─ devices/                  ← 设备配对（忽略）
