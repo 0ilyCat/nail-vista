@@ -91,7 +91,7 @@ class Settings(BaseSettings):
                 f"postgresql+asyncpg://{self.PG_USER}:{self.PG_PASSWORD}"
                 f"@{self.PG_HOST}:{self.PG_PORT}/{self.PG_DB}"
             )
-        db_path = Path(__file__).parent.parent / "nail_tryon.db"
+        db_path = Path(__file__).parent.parent.parent / "nail_tryon.db"
         return f"sqlite+aiosqlite:///{db_path}"
 
 
