@@ -19,9 +19,12 @@ from app.services.skill_router import detect_skill, execute_skill, format_skill_
 router = APIRouter()
 settings = get_settings()
 
-# OpenClaw Gateway config (from .env)
-OPENCLAW_BASE = settings.OPENCLAW_BASE_URL.rstrip("/")
-OPENCLAW_TOKEN = settings.OPENCLAW_GATEWAY_TOKEN
+# OpenClaw Gateway config（每次调用时实时读取，避免模块缓存过期）
+def _get_openclaw_base() -> str:
+    return get_settings().OPENCLAW_BASE_URL.rstrip("/")
+
+def _get_openclaw_token() -> str:
+    return get_settings().OPENCLAW_GATEWAY_TOKEN
 
 
 class ChatRequest(BaseModel):
@@ -181,8 +184,8 @@ async def _stream_chat(
         openclaw_messages.append({"role": "user", "content": message})
 
     headers = {"Content-Type": "application/json"}
-    if OPENCLAW_TOKEN:
-        headers["Authorization"] = f"Bearer {OPENCLAW_TOKEN}"
+    if _get_openclaw_token():
+        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
     headers["x-openclaw-agent"] = agent_id
 
     payload = {
@@ -204,7 +207,7 @@ async def _stream_chat(
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
                 "POST",
-                f"{OPENCLAW_BASE}/v1/chat/completions",
+                f"{_get_openclaw_base()}/v1/chat/completions",
                 json=payload,
                 headers=headers,
             ) as response:
@@ -329,14 +332,14 @@ async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
         messages.append({"role": "user", "content": req.message})
 
     headers = {"Content-Type": "application/json"}
-    if OPENCLAW_TOKEN:
-        headers["Authorization"] = f"Bearer {OPENCLAW_TOKEN}"
+    if _get_openclaw_token():
+        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
     headers["x-openclaw-agent"] = agent_id
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
-                f"{OPENCLAW_BASE}/v1/chat/completions",
+                f"{_get_openclaw_base()}/v1/chat/completions",
                 json={"model": model_name, "messages": messages, "stream": False},
                 headers=headers,
             )
@@ -395,14 +398,14 @@ async def chat_dashboard(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     messages.append({"role": "user", "content": req.message})
 
     headers = {"Content-Type": "application/json"}
-    if OPENCLAW_TOKEN:
-        headers["Authorization"] = f"Bearer {OPENCLAW_TOKEN}"
+    if _get_openclaw_token():
+        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
     headers["x-openclaw-agent"] = agent_id
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
-                f"{OPENCLAW_BASE}/v1/chat/completions",
+                f"{_get_openclaw_base()}/v1/chat/completions",
                 json={"model": model_name, "messages": messages, "stream": False},
                 headers=headers,
             )
