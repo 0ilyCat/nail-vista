@@ -2,11 +2,11 @@
 
 _Learn about the person you're helping. Update this as you go._
 
-- **Name:**
-- **What to call them:**
+- **Name:** 待了解
+- **What to call them:** 您
 - **Pronouns:** _(optional)_
-- **Timezone:**
-- **Notes:**
+- **Timezone:** 亚洲/上海（推测）
+- **Notes:** 第一次交互，使用中文问候
 
 ## Context
 

@@ -1,8 +1,3 @@
-from pydantic_settings import BaseSettings
-from functools import lru_cache
-from pathlib import Path
-import json
-
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "NailVista"
@@ -96,6 +91,5 @@ class Settings(BaseSettings):
         return f"sqlite+aiosqlite:///{db_path}"
 
 
-@lru_cache()
 def get_settings() -> Settings:
     return Settings()
