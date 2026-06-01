@@ -47,21 +47,34 @@ class Settings(BaseSettings):
         self._load_openclaw_config()
 
     def _load_openclaw_config(self):
-        """自动从项目根目录的 openclaw/openclaw.json 读取 Gateway 配置"""
-        # config.py 位于 backend/app/core/，项目根目录向上三级
+        """自动从项目根目录的 .openclaw/openclaw.json 读取 Gateway 配置"""
         project_root = Path(__file__).parent.parent.parent
-        config_path = project_root / "openclaw" / "openclaw.json"
+        config_path = project_root / ".openclaw" / "openclaw.json"
         if not config_path.exists():
             return
 
         try:
             with open(config_path, "r", encoding="utf-8") as f:
-                oc = json.load(f)
+                raw = f.read()
+            # 移除 JSON 不支持的行注释
+            import re
+            raw = re.sub(r'//.*', '', raw)
+            oc = json.loads(raw)
+
+            # 读取 env 段中的变量定义
+            env_vars = oc.get("env", {})
+
+            def resolve(value):
+                """解析 ${VAR} 引用"""
+                if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+                    var_name = value[2:-1]
+                    return env_vars.get(var_name, value)
+                return value
 
             gateway = oc.get("gateway", {})
             port = gateway.get("port", 18789)
             auth = gateway.get("auth", {})
-            token = auth.get("token", "")
+            token = resolve(auth.get("token", ""))
 
             if not self.OPENCLAW_BASE_URL or self.OPENCLAW_BASE_URL == "http://127.0.0.1:18789":
                 self.OPENCLAW_BASE_URL = f"http://127.0.0.1:{port}"

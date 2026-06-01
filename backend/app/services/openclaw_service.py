@@ -1,5 +1,5 @@
 """
-LongCat AI 对话服务 — OpenAI 兼容 API
+AI 对话服务 — 通过 OpenClaw Gateway API 调用
 """
 import logging
 from openai import OpenAI
@@ -9,16 +9,16 @@ logger = logging.getLogger(__name__)
 
 
 class LongCatAIService:
-    """LongCat AI 服务 — 通过 OpenAI 兼容 API 调用"""
+    """AI 服务 — 通过 OpenClaw Gateway 的 OpenAI 兼容 API 调用"""
 
     def __init__(self):
         settings = get_settings()
         self.client = OpenAI(
-            base_url=settings.LONGCAT_BASE_URL,
-            api_key=settings.LONGCAT_API_KEY,
+            base_url=f"{settings.OPENCLAW_BASE_URL}/v1",
+            api_key=settings.OPENCLAW_GATEWAY_TOKEN or "not-needed",
         )
-        self.model = settings.LONGCAT_MODEL
-        self.available = bool(settings.LONGCAT_API_KEY)
+        self.model = "xiaomi-coding/mimo-v2.5-pro"
+        self.available = bool(settings.OPENCLAW_BASE_URL)
 
     async def chat(self, messages: list[dict], **kwargs) -> str:
         """调用 LongCat 模型对话"""
