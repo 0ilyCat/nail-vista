@@ -9,9 +9,8 @@ backend/results/
 # 上传计数器（运行时状态）
 backend/uploads/.upload_counter
 
-# WorkBuddy & CLI runtime state (not versioned)
+# WorkBuddy
 .workbuddy/
-.cli/
 
 # Python
 __pycache__/
