@@ -117,6 +117,10 @@ python import_data.py
 uvicorn app.main:app --port 8190 --reload
 ```
 
+> **关于静态资源**：`backend/static/` 和 `backend/uploads/` 已提交到仓库，包含 25 款美甲样式图、13 张示例手图、2 张用户上传示例。clone 后无需额外下载图片资源。运行 `import_data.py` 后数据库即关联这些图片路径，接口即可正常返回图片 URL（如 `/static/styles/style_01.png`）。
+
+> **AI 试戴结果图**：`backend/results/` 目录存放 AI 生成的试戴效果图，已加入 `.gitignore`。首次试戴某组合时会实时生成（调用百炼/MediaPipe），后续命中缓存直接返回。
+
 #### 2. 前端启动（新终端）
 
 ```bash
@@ -220,6 +224,9 @@ curl http://localhost:18789/health        # 返回 {"ok":true,"status":"live"}
 | 忽略 | `.openclaw/tasks/` | 否 — 任务调度数据库 |
 | 忽略 | `.openclaw/plugins/` | 否 — 插件安装缓存 |
 | 忽略 | `.openclaw/openclaw.json.last-good` | 否 — 运行时自动备份，非源文件 |
+| 提交 | `backend/static/` | 是 — 25 款美甲样式图 + 13 张示例手图 + 2 张用户上传示例 |
+| 提交 | `backend/uploads/` | 是 — 用户上传图片示例（含上传计数器） |
+| 忽略 | `backend/results/` | 否 — AI 生成的试戴结果图，运行时产生 |
 
 #### 如何配置其他语言模型？
 
