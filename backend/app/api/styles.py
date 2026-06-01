@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from pathlib import Path
+import logging
 from app.core.database import get_db
 from app.core.config import get_settings
 from app.models.models import NailStyle, StyleMetrics, TryonRecord
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger("nailvista.styles")
 
 STYLES_DIR = Path(settings.STATIC_DIR) / "styles"
 

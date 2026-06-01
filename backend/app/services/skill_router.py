@@ -5,6 +5,8 @@ Architecture:
   User Message -> detect_skill() -> execute_skill_internal() -> format_skill_context() -> OpenClaw
 """
 import json
+import logging
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -15,6 +17,8 @@ from app.models.models import (
     NailStyle, StyleMetrics, TryonRecord,
     Order, Refund, Review, DailyRevenue, TrafficMetrics, CouponUsage,
 )
+
+logger = logging.getLogger("nailvista.skill")
 
 
 # -- Skill definitions (extended with Meituan-style metrics) --------
@@ -407,6 +411,7 @@ async def _get_trends(db: AsyncSession, days: int = 7) -> dict:
 async def execute_skill(skill: dict, message: str, db: AsyncSession) -> dict:
     try:
         skill_name = skill["name"]
+        logger.info(f"[EXEC] skill={skill_name} | msg={message[:60]}")
 
         if skill_name == "ops-overview":
             data = await _get_overview(db)
@@ -480,8 +485,8 @@ async def execute_skill(skill: dict, message: str, db: AsyncSession) -> dict:
             return {"skill": skill_name, "success": False, "error": f"Unknown skill: {skill_name}"}
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"[SKILL] execute_skill failed: {skill.get('name', '?')} | {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
         return {"skill": skill.get("name", "?"), "success": False, "error": str(e)}
 
 

@@ -2,6 +2,7 @@
 import json
 import uuid
 import asyncio
+import logging
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,6 +19,7 @@ from app.services.skill_router import detect_skill, execute_skill, format_skill_
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger("nailvista.chat")
 
 # OpenClaw Gateway config（每次调用时实时读取，避免模块缓存过期）
 def _get_openclaw_base() -> str:
@@ -135,6 +137,8 @@ async def _stream_chat(
     """Core SSE streaming logic — proxies OpenClaw and formats events"""
     agent_id, model_name = _map_agent(agent_type)
 
+    logger.info(f"[STREAM] agent={agent_type}({agent_id}) model={model_name} | msg={message[:80]} | image={bool(image_url)}")
+
     # Save user message
     session = await _get_or_create_session(db, session_key, agent_type)
     await _save_message(db, session.id, "user", message)
@@ -151,14 +155,19 @@ async def _stream_chat(
     if skill:
         skill_desc = skill["description"]
         skill_name_val = skill["name"]
+        logger.info(f"[SKILL] detected={skill_name_val} | agent={agent_type}")
         yield f"data: {json.dumps({'type': 'skill_start', 'name': skill_name_val, 'description': f'🔍 正在使用 {skill_desc}...'}, ensure_ascii=False)}\n\n"
         skill_result = await execute_skill(skill, message, db)
         if skill_result.get("success"):
             skill_context = format_skill_context(skill_result, skill_name_val)
+            logger.info(f"[SKILL] success={skill_name_val} | context_len={len(skill_context)}")
             yield f"data: {json.dumps({'type': 'skill_end', 'name': skill_name_val, 'result': '✅ 数据查询完成'}, ensure_ascii=False)}\n\n"
         else:
             err_msg = skill_result.get("error", "未知错误")
+            logger.error(f"[SKILL] failed={skill_name_val} | error={err_msg}")
             yield f"data: {json.dumps({'type': 'skill_end', 'name': skill_name_val, 'result': f'⚠️ {err_msg}'}, ensure_ascii=False)}\n\n"
+    else:
+        logger.info(f"[SKILL] none detected | agent={agent_type}")
 
     # Build messages array with history
     history = await _get_history(db, session.id)
@@ -204,6 +213,7 @@ async def _stream_chat(
     is_thinking = False
 
     try:
+        logger.info(f"[OPENCLAW] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(openclaw_messages)}")
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
                 "POST",
@@ -213,8 +223,12 @@ async def _stream_chat(
             ) as response:
                 if response.status_code != 200:
                     error_text = await response.aread()
+                    error_preview = error_text.decode("utf-8", errors="replace")[:500]
+                    logger.error(f"[OPENCLAW] HTTP {response.status_code} | agent={agent_id} | body={error_preview}")
                     yield f"data: {json.dumps({'type': 'error', 'message': f'OpenClaw error: {response.status_code}'}, ensure_ascii=False)}\n\n"
                     return
+
+                logger.info(f"[OPENCLAW] stream started | agent={agent_id}")
 
                 buffer = ""
                 async for chunk in response.aiter_bytes():
@@ -273,10 +287,14 @@ async def _stream_chat(
                                 elif current_tool and args:
                                     current_tool["input"] += args
 
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
+        logger.error(f"[OPENCLAW] Connection refused: {_get_openclaw_base()} | {e}")
         yield f"data: {json.dumps({'type': 'error', 'message': '无法连接到 AI 服务，请确认 OpenClaw Gateway 已启动'}, ensure_ascii=False)}\n\n"
         return
     except Exception as e:
+        import traceback
+        logger.error(f"[STREAM] Unexpected error: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
         yield f"data: {json.dumps({'type': 'error', 'message': f'AI 服务异常: {str(e)}'}, ensure_ascii=False)}\n\n"
         return
 
@@ -289,6 +307,7 @@ async def _stream_chat(
     if full_reply:
         await _save_message(db, session.id, "assistant", full_reply, tool_calls, thinking)
 
+    logger.info(f"[STREAM] done | agent={agent_type} | reply_len={len(full_reply)} | tools={len(tool_calls)} | thinking_len={len(thinking)}")
     # Done
     yield f"data: {json.dumps({'type': 'done', 'session_key': session.session_key}, ensure_ascii=False)}\n\n"
 
@@ -298,6 +317,7 @@ async def _stream_chat(
 @router.post("/user")
 async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     """用户侧聊天（非流式，返回完整回复）"""
+    logger.info(f"[USER] msg={req.message[:80]} | session={req.session_key} | image={bool(req.image_url)}")
     session = await _get_or_create_session(db, req.session_key, "user")
     await _save_message(db, session.id, "user", req.message)
     if session.title == "新对话":
@@ -337,6 +357,7 @@ async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     headers["x-openclaw-agent"] = agent_id
 
     try:
+        logger.info(f"[NON-STREAM] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(messages)}")
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
                 f"{_get_openclaw_base()}/v1/chat/completions",
@@ -344,16 +365,27 @@ async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
                 headers=headers,
             )
             if resp.status_code != 200:
+                error_body = resp.text[:500]
+                logger.error(f"[NON-STREAM] OpenClaw HTTP {resp.status_code}: {error_body}")
                 raise HTTPException(status_code=502, detail=f"OpenClaw error: {resp.status_code}")
 
             data = resp.json()
             reply = data["choices"][0]["message"]["content"]
+            logger.info(f"[NON-STREAM] reply_len={len(reply)} | session={session.session_key}")
 
             await _save_message(db, session.id, "assistant", reply)
             return ChatResponse(session_key=session.session_key, reply=reply)
 
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
+        logger.error(f"[NON-STREAM] Connection refused: {_get_openclaw_base()} | {e}")
         raise HTTPException(status_code=503, detail="AI 服务不可用，请确认 OpenClaw Gateway 已启动")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"[NON-STREAM] Unexpected: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"AI 服务异常: {str(e)}")
 
 
 @router.post("/user/stream")
@@ -403,6 +435,7 @@ async def chat_dashboard(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     headers["x-openclaw-agent"] = agent_id
 
     try:
+        logger.info(f"[NON-STREAM] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(messages)}")
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
                 f"{_get_openclaw_base()}/v1/chat/completions",
@@ -410,16 +443,27 @@ async def chat_dashboard(req: ChatRequest, db: AsyncSession = Depends(get_db)):
                 headers=headers,
             )
             if resp.status_code != 200:
+                error_body = resp.text[:500]
+                logger.error(f"[NON-STREAM] OpenClaw HTTP {resp.status_code}: {error_body}")
                 raise HTTPException(status_code=502, detail=f"OpenClaw error: {resp.status_code}")
 
             data = resp.json()
             reply = data["choices"][0]["message"]["content"]
+            logger.info(f"[NON-STREAM] reply_len={len(reply)} | session={session.session_key}")
 
             await _save_message(db, session.id, "assistant", reply)
             return ChatResponse(session_key=session.session_key, reply=reply)
 
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
+        logger.error(f"[NON-STREAM] Connection refused: {_get_openclaw_base()} | {e}")
         raise HTTPException(status_code=503, detail="AI 服务不可用，请确认 OpenClaw Gateway 已启动")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"[NON-STREAM] Unexpected: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"AI 服务异常: {str(e)}")
 
 
 @router.post("/dashboard/stream")

@@ -5,6 +5,7 @@ from pathlib import Path
 import time
 import uuid
 import shutil
+import logging
 
 from app.core.database import get_db
 from app.core.config import get_settings
@@ -15,6 +16,7 @@ from datetime import datetime
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger("nailvista.tryon")
 
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 HANDS_DIR = Path(settings.STATIC_DIR) / "hands"
@@ -108,7 +110,10 @@ async def try_on(
 ):
     style = await db.get(NailStyle, style_id)
     if not style:
+        logger.warning(f"[TRYON] style not found: {style_id}")
         raise HTTPException(404, "款式不存在")
+
+    logger.info(f"[TRYON] hand={hand_id} style={style_id}({style.name})")
 
     hand_name = hand_id
     if hand_image_id is not None:
@@ -164,9 +169,13 @@ async def try_on(
                 result_url = f"/results/{fb_name}"
                 source = "opencv"
             except Exception as e:
+                import traceback
+                logger.error(f"[TRYON] fallback failed: {type(e).__name__}: {e}")
+                logger.error(traceback.format_exc())
                 raise HTTPException(500, f"试戴处理失败: {e}")
 
     duration_ms = int((time.time() - t0) * 1000)
+    logger.info(f"[TRYON] done | result={result_url} | source={source} | {duration_ms}ms")
 
     hand_db_id = None
     if hand_image_id:

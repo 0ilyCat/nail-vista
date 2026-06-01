@@ -23,18 +23,24 @@ class LongCatAIService:
     async def chat(self, messages: list[dict], **kwargs) -> str:
         """调用 LongCat 模型对话"""
         if not self.available:
+            logger.warning("OpenClaw 不可用，使用 mock 回复")
             return self._mock_reply(messages[-1]["content"] if messages else "")
 
         try:
+            logger.info(f"[LLM] chat | model={self.model} | msgs={len(messages)} | temp={kwargs.get('temperature', 0.7)}")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=kwargs.get("temperature", 0.7),
                 max_tokens=kwargs.get("max_tokens", 2048),
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            logger.info(f"[LLM] chat done | reply_len={len(content)}")
+            return content
         except Exception as e:
-            logger.error(f"LongCat API 调用失败: {e}")
+            import traceback
+            logger.error(f"[LLM] chat failed: {type(e).__name__}: {e}")
+            logger.error(traceback.format_exc())
             return self._mock_reply(messages[-1]["content"] if messages else "")
 
     async def generate_daily_report(self, metrics: dict) -> str:

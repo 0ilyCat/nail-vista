@@ -3,11 +3,14 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, text
 from datetime import datetime, timedelta
+import logging
+import traceback
 from app.core.database import get_db
 from app.models.models import OperationsReport, StyleMetrics, NailStyle
 from app.services.openclaw_service import longcat_service
 
 router = APIRouter()
+logger = logging.getLogger("nailvista.ops")
 
 
 class ChatRequest(BaseModel):
@@ -22,6 +25,7 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def operations_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     """与AI运营助手对话 — 调用LongCat"""
+    logger.info(f"[OPS-CHAT] msg={req.message[:80]}")
     # 构建上下文数据
     context = await _get_context(db)
     system_prompt = f"""你是美甲平台的AI运营助手。当前平台数据：
@@ -36,6 +40,7 @@ async def operations_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
         {"role": "user", "content": req.message},
     ]
     reply = await longcat_service.chat(messages)
+    logger.info(f"[OPS-CHAT] reply_len={len(reply)}")
     return ChatResponse(reply=reply)
 
 
@@ -90,6 +95,7 @@ async def generate_report(
     db: AsyncSession = Depends(get_db),
 ):
     """调用LongCat生成运营报告"""
+    logger.info(f"[REPORT] generating type={report_type}")
     context = await _get_context(db)
     report_content = ""
     report_metrics = {}
@@ -105,7 +111,10 @@ async def generate_report(
         report_content = await longcat_service.generate_strategy(context)
         report_metrics = context
     else:
+        logger.warning(f"[REPORT] unsupported type: {report_type}")
         raise HTTPException(400, f"不支持的报告类型: {report_type}")
+
+    logger.info(f"[REPORT] done | type={report_type} | content_len={len(report_content)}")
 
     report = OperationsReport(
         report_type=report_type,
@@ -225,8 +234,10 @@ async def execute_sql(req: ExecuteSQLRequest, db: AsyncSession = Depends(get_db)
     try:
         # Use raw connection for SQL execution (SQLite compatibility)
         from sqlalchemy import text as sa_text
+        logger.info(f"[SQL] executing: {sql[:200]}")
         result = await db.execute(sa_text(sql))
         rows = result.all()
+        logger.info(f"[SQL] done | rows={len(rows)}")
 
         # Convert to list of dicts
         columns = list(result.keys())
@@ -246,6 +257,8 @@ async def execute_sql(req: ExecuteSQLRequest, db: AsyncSession = Depends(get_db)
             "sql_executed": sql,
         }
     except Exception as e:
+        logger.error(f"[SQL] execution error: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(400, f"SQL 执行错误: {str(e)}")
 
 
@@ -289,6 +302,7 @@ async def nl2sql(req: NL2SQLRequest, db: AsyncSession = Depends(get_db)):
 SQL:"""
 
     try:
+        logger.info(f"[NL2SQL] question={req.question[:80]}")
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{settings.OPENCLAW_BASE_URL}/v1/chat/completions",
@@ -317,13 +331,17 @@ SQL:"""
                 if match:
                     sql = match.group(0).strip()
 
+            logger.info(f"[NL2SQL] generated: {sql[:200]}")
             return {
                 "status": "generated",
                 "sql": sql,
                 "question": req.question,
                 "hint": "请检查 SQL 是否正确。确认后调用 POST /api/operations/execute-sql 执行。",
             }
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
+        logger.error(f"[NL2SQL] Connection refused: {settings.OPENCLAW_BASE_URL} | {e}")
         raise HTTPException(503, "AI 服务不可用")
     except Exception as e:
+        logger.error(f"[NL2SQL] failed: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(500, f"SQL 生成失败: {str(e)}")
