@@ -55,9 +55,6 @@ Thumbs.db
 .openclaw/openclaw.json
 .openclaw/agents/*/.openclaw/
 
-# 自动创建的 Agent 会话目录（含旧 ID 遗留）
-.openclaw/agents/nailvista-*/
-
 # 自动创建的 workspace 目录（含旧 ID 遗留，运行时自动生成）
 .openclaw/workspace-*/
 
