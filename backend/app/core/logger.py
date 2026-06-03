@@ -10,8 +10,26 @@ from typing import Callable
 from functools import wraps
 
 # ── 格式化器 ──
-LOG_FORMAT = "%(asctime)s | %(levelname)-5s | %(name)s | %(message)s"
+LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 DATE_FORMAT = "%m-%d %H:%M:%S"
+
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: "\033[36m",    # Cyan
+        logging.INFO: "\033[32m",     # Green
+        logging.WARNING: "\033[33m",  # Yellow
+        logging.ERROR: "\033[31m",    # Red
+        logging.CRITICAL: "\033[1;31m" # Bold Red
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, "")
+        # Pad length while avoiding len() counting ANSI codes
+        levelname = record.levelname
+        padded_level = f"{levelname:<5}"
+        record.levelname = f"{color}{padded_level}{self.RESET}"
+        return super().format(record)
 
 
 def setup_logging(level: int = logging.DEBUG):
@@ -24,7 +42,7 @@ def setup_logging(level: int = logging.DEBUG):
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(level)
-    handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
+    handler.setFormatter(ColorFormatter(LOG_FORMAT, DATE_FORMAT))
     root.addHandler(handler)
 
     # 降低第三方库日志级别

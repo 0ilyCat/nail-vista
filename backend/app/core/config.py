@@ -1,3 +1,9 @@
+import json
+from pathlib import Path
+
+from pydantic_settings import BaseSettings
+
+
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "NailVista"
@@ -43,7 +49,7 @@ class Settings(BaseSettings):
 
     def _load_openclaw_config(self):
         """自动从项目根目录的 .openclaw/openclaw.json 读取 Gateway 配置"""
-        project_root = Path(__file__).parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         config_path = project_root / ".openclaw" / "openclaw.json"
         if not config_path.exists():
             return

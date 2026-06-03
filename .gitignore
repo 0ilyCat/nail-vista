@@ -48,6 +48,11 @@ Thumbs.db
 # Agent 运行时状态
 .openclaw/agents/*/state/
 .openclaw/agents/*/sessions/
+
+# IDE & Runtime plugins
+.openclaw/plugin-skills/
+.vscode/
+.openclaw/openclaw.json
 .openclaw/agents/*/.openclaw/
 
 # 自动创建的 Agent 会话目录（含旧 ID 遗留）

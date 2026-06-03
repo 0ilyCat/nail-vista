@@ -1,6 +1,7 @@
 {
+  "//_comment": "切换模型只需修改 env.LLM_API_KEY + models.providers + agents.defaults.model.primary 三处。gateway/agents/browser 无需改动。",
   "env": {
-    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE",
+    "LLM_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE",
     "OPENCLAW_GATEWAY_TOKEN": "nailvista-dev-token"
   },
   "models": {
@@ -9,7 +10,7 @@
       "xiaomi-coding": {
         "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
         "api": "openai-completions",
-        "apiKey": "${MIMO_API_KEY}",
+        "apiKey": "${LLM_API_KEY}",
         "models": [
           {
             "id": "mimo-v2.5-pro",
@@ -43,16 +44,16 @@
     },
     "list": [
       {
-        "id": "xiaomei",
+        "id": "nailvista-xiaomei",
         "name": "小美",
-        "workspace": ".openclaw/agents/xiaomei",
-        "agentDir": ".openclaw/agents/xiaomei/state"
+        "workspace": ".openclaw/agents/nailvista-xiaomei",
+        "agentDir": ".openclaw/agents/nailvista-xiaomei/state"
       },
       {
-        "id": "ops",
+        "id": "nailvista-ops",
         "name": "运营助手",
-        "workspace": ".openclaw/agents/ops",
-        "agentDir": ".openclaw/agents/ops/state"
+        "workspace": ".openclaw/agents/nailvista-ops",
+        "agentDir": ".openclaw/agents/nailvista-ops/state"
       }
     ]
   },
