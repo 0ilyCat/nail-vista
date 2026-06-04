@@ -5,389 +5,271 @@
 <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
 <img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white" />
 <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white" />
-<img src="https://img.shields.io/badge/MediaPipe-0.10-FF6F00?style=flat-square&logo=google&logoColor=white" />
-<img src="https://img.shields.io/badge/AI-MiMo_V2.5-FF69B4?style=flat-square&logo=openai&logoColor=white" />
+<img src="https://img.shields.io/badge/AI-qwen--image--2.0--pro-FF69B4?style=flat-square&logo=alibabacloud&logoColor=white" />
 <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 
 </div>
 
-# 💅 NailVista — 美甲AI虚拟试戴与智能运营
+# NailVista — AI美甲试戴与智能运营
 
-> 让用户「所见即所得」，让运营「实时感知趋势」
+> 让用户「所见即所得」，让商家「实时管理」
 
-智能体开发大赛 · 智能体应用赛道
-
----
-
-## ✨ 项目简介
-
-NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台。
-
-- 💅 **AI虚拟试戴**：上传手部照片 → 选择美甲款式 → 秒级查看试戴效果
-- 📊 **智能运营看板**：实时热度排行、7日趋势图表、AI自动生成运营日报
-- 🤖 **OpenClaw AI助手**：自然语言问答、自动生成运营策略、趋势分析报告
+智能体开发大赛 · 智能体应用赛道 · 龙猫队
 
 ---
 
-## 🏗️ 系统架构
+## 项目简介
+
+NailVista 是一个 **AI美甲虚拟试戴 × 社区 × 商家运营** 平台。
+
+- **AI虚拟试戴**：选择商家 → 选择手图 → 选择款式 → 百炼 AI 生成试戴效果图，结果缓存复用
+- **灵感广场**：小红书风格美甲社区，点赞/发布/多图帖子
+- **店家专区**：商家列表/详情/店面轮播/预约时段/入驻系统
+- **商家后台**：数据概览、款式管理、预约管理、时段设置
+
+---
+
+## 系统架构
 
 ```
 ┌─────────────────────┐     ┌──────────────────────────┐     ┌─────────────────┐
-│   React 19 + Vite   │────▶│   FastAPI (端口 8190)     │────▶│   SQLite        │
+│   React 19 + Vite   │────▶│   FastAPI (端口 8190)     │────▶│   MySQL         │
 │   端口 4180          │     │                          │     └─────────────────┘
-│                     │     │  /api/styles   款式管理    │
-│  首页               │     │  /api/tryon    试戴引擎    │     ┌─────────────────┐
-│  AI试戴             │     │  /api/analytics 数据分析   │────▶│  OpenClaw       │
-│  款式浏览           │     │  /api/operations AI运营    │     │  MiMo V2.5     │
-│  运营看板           │     │                          │     └─────────────────┘
-└─────────────────────┘     │  MediaPipe + OpenCV       │
-                            │  百炼 qwen-image-2.0     │
-                            └──────────────────────────┘
-```
-
-### AI试戴流程
-
-```
-上传手部照片 → MediaPipe 21点手部关键点检测 → 指甲区域定位
-                                                  ↓
-              款式图（透视变换）              →  OpenCV 叠加 + 边缘羽化
-                                                  ↓
-              百炼 qwen-image-2.0-pro       →  AI生成结果（自动缓存）
+│                     │     │  /api/tryon    试戴引擎    │
+│  灵感广场           │     │  /api/posts    帖子社区    │     ┌─────────────────┐
+│  AI试戴             │     │  /api/styles   款式管理    │────▶│  百炼 AI        │
+│  店家专区           │     │  /api/merchants商家管理    │     │  qwen-image-    │
+│  商家后台           │     │  /api/appointments预约     │     │  2.0-pro-       │
+│  小美对话           │     │  /api/admin    后台管理    │     │  2026-04-22     │
+└─────────────────────┘     └──────────────────────────┘     └─────────────────┘
 ```
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
-- Python 3.12+（推荐 conda）
-- Node.js 22.16+
-- OpenClaw（本地 AI 引擎）：`npm install -g openclaw`
+- Python 3.12+（推荐 conda 环境 `nail`）
+- Node.js 22+
+- MySQL 数据库
 
-### 第一步：配置 API Key
+### 第一步：配置
 
-**1. OpenClaw LLM API Key（必填，用于 AI 对话）**
-
-编辑 `.openclaw/openclaw.json`，替换 `env.MIMO_API_KEY` 为你的 MiMo Token Plan Key：
-
-```json
-{
-  "env": {
-    "MIMO_API_KEY": "YOUR_TOKEN_PLAN_KEY_HERE"
-  }
-}
+```bash
+cp backend/.env.example backend/.env
+# 编辑 backend/.env，填入数据库密码和百炼 API Key
 ```
 
-> 获取 Key：https://token-plan-cn.xiaomimimo.com
+关键配置项：
 
-**2. 百炼图生模型（可选，用于 AI 试戴图生成）**
-
-编辑 `backend/.env`（从 `.env.example` 复制）：
-```env
-# 阿里百炼图生模型 API Key（可选）— https://dashscope.console.aliyun.com/
-DASHSCOPE_API_KEY=sk-xxxxxxxxxxxxxxxx
-```
-
-**3. OpenClaw Gateway Token（无需配置）**
-
-`.openclaw/openclaw.json` 中 `gateway.auth.token` 通过 `${OPENCLAW_GATEWAY_TOKEN}` 引用 `env` 段的 `nailvista-dev-token`，本地开发无需修改。
-
----
+| 变量 | 说明 |
+|------|------|
+| `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME` | MySQL 连接 |
+| `DASHSCOPE_API_KEY` | 阿里百炼图生模型 Key（AI试戴必填） |
+| `JWT_SECRET_KEY` | JWT 签名密钥 |
 
 ### 第二步：启动服务
 
-#### 1. 后端启动
-
 ```bash
-# 克隆仓库后，进入后端目录
-cd meituan-hackathon/backend
-
-# 从模板复制环境变量文件（仅含 DASHSCOPE_API_KEY）
-cp .env.example .env
-# 编辑 .env，填入你的 DASHSCOPE_API_KEY（可选）
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 导入种子数据（25款美甲 + 运营指标）
-python import_data.py
-
-# 启动后端（端口 8190）
-uvicorn app.main:app --port 8190 --reload
-```
-
-> **关于静态资源**：`backend/static/` 和 `backend/uploads/` 已提交到仓库，包含 25 款美甲样式图、13 张示例手图、2 张用户上传示例。clone 后无需额外下载图片资源。运行 `import_data.py` 后数据库即关联这些图片路径，接口即可正常返回图片 URL（如 `/static/styles/style_01.png`）。
-
-> **AI 试戴结果图**：`backend/results/` 目录存放 AI 生成的试戴效果图，已加入 `.gitignore`。首次试戴某组合时会实时生成（调用百炼/MediaPipe），后续命中缓存直接返回。
-
-#### 2. 前端启动（新终端）
-
-```bash
-# 进入前端目录
-cd meituan-hackathon/frontend
-
-# 安装依赖
-npm install
-
-# 启动前端（端口 4180）
-npm run dev
-```
-
-#### 3. OpenClaw Gateway 启动（新终端）
-
-**Windows（PowerShell）：**
-```powershell
-cd meituan-hackathon
-.\start-openclaw.ps1
-```
-
-**Linux / macOS（Bash）：**
-```bash
-cd meituan-hackathon
-bash start-openclaw.sh
-```
-
-**手动启动（任意平台）：**
-```bash
-# 1. 设置项目目录（让 OpenClaw 读取 .openclaw/ 下的配置）
-# Windows PowerShell:
-$env:OPENCLAW_HOME = 'C:\path\to\meituan-hackathon'
-# Linux / macOS:
-export OPENCLAW_HOME=/path/to/meituan-hackathon
-
-# 2. 启动 OpenClaw Gateway（端口 18789）
-openclaw gateway run --port 18789
-```
-
----
-
-### 第三步：验证启动成功
-
-```bash
-# 后端健康检查
-curl http://localhost:8190/api/styles   # 返回款式列表
-
-# 前端页面
-# 浏览器访问 http://localhost:4180
-
-# OpenClaw 状态
-curl http://localhost:18789/health        # 返回 {"ok":true,"status":"live"}
-```
-
----
-
-### 配置说明（项目内自包含，无隐式依赖）
-
-| 配置项 | 存放位置 | 说明 |
-|---------|----------|------|
-| OpenClaw 配置（模型、Agent、Gateway、API Key） | `.openclaw/openclaw.json` | 提交到仓库，`env` 段自包含 API Key；直接用文本编辑器修改 |
-| OpenClaw Agent 定义（小美/运营助手） | `.openclaw/agents/` | 提交到仓库，含 SOUL.md、SKILL.md 等 |
-| OpenClaw 配置模板 | `.openclaw/openclaw.json.example` | 提交到仓库，队友可参考 |
-| 百炼 API Key（图像生成） | `backend/.env` | `.env` 不提交，从 `.env.example` 复制后填写 |
-| 数据库配置 | `backend/.env` | 可选，默认 SQLite 零配置 |
-
-> OpenClaw 的所有配置（含 API Key）均在 `.openclaw/openclaw.json` 的 `env` 段中自包含管理，通过 `${MIMO_API_KEY}` 内部引用，不依赖操作系统环境变量。仅 DASHSCOPE_API_KEY 需要从 `backend/.env` 读取。
-
-#### OpenClaw 项目目录结构（`.openclaw/`）
-
-```
-.openclaw/
-├─ agents/                   ← Agent 定义（提交，也是 agent 的 workspace）
-│  ├─ xiaomei/               ← 小美：SOUL.md + 4 skills（workspace 指向此处）
-│  └─ ops/                   ← 运营助手：SOUL.md + 5 skills（workspace 指向此处）
-├─ plugin-skills/            ← 共享插件技能（提交）
-├─ openclaw.json             ← 主配置（提交，env 段自包含密钥）
-├─ openclaw.json.example     ← 配置模板（提交）
-│
-├─ workspace/                ← 全局运行时目录（忽略，agent 不再使用）
-├─ logs/                     ← 运行时日志（忽略）
-├─ identity/                 ← 设备身份（忽略，每人独有）
-├─ devices/                  ← 设备配对（忽略）
-├─ tasks/                    ← 任务调度数据库（忽略）
-├─ plugins/                  ← 插件缓存（忽略）
-└─ openclaw.json.last-good   ← 自动备份（忽略）
-```
-
-| 类别 | 文件/目录 | 是否提交 |
-|------|-----------|----------|
-| 提交 | `.openclaw/openclaw.json` | 是 — 主配置，`env` 段自包含 API Key + Gateway Token |
-| 提交 | `.openclaw/openclaw.json.example` | 是 — 配置参考模板 |
-| 提交 | `.openclaw/agents/*/AGENTS.md` `SOUL.md` `IDENTITY.md` `TOOLS.md` `USER.md` `HEARTBEAT.md` `skills/` | 是 — Agent 定义与技能 |
-| 提交 | `.openclaw/plugin-skills/` | 是 — 共享插件技能 |
-| 忽略 | `.openclaw/agents/*/state/` | 否 — 运行时模型状态 |
-| 忽略 | `.openclaw/agents/*/sessions/` | 否 — Agent 会话记录 |
-| 忽略 | `.openclaw/workspace/` | 否 — Agent 运行时工作目录 |
-| 忽略 | `.openclaw/logs/` | 否 — 运行时日志 |
-| 忽略 | `.openclaw/identity/` | 否 — 设备身份（私密） |
-| 忽略 | `.openclaw/devices/` | 否 — 设备配对信息（私密） |
-| 忽略 | `.openclaw/tasks/` | 否 — 任务调度数据库 |
-| 忽略 | `.openclaw/plugins/` | 否 — 插件安装缓存 |
-| 忽略 | `.openclaw/openclaw.json.last-good` | 否 — 运行时自动备份，非源文件 |
-| 提交 | `backend/static/` | 是 — 25 款美甲样式图 + 13 张示例手图 + 2 张用户上传示例 |
-| 提交 | `backend/uploads/` | 是 — 用户上传图片示例（含上传计数器） |
-| 忽略 | `backend/results/` | 否 — AI 生成的试戴结果图，运行时产生 |
-
-#### 如何配置其他语言模型？
-
-编辑 `.openclaw/openclaw.json` 中的 `models.providers`，添加对应模型：
-```json
-"models": {
-  "mode": "merge",
-  "providers": {
-    "openai": {
-      "baseUrl": "https://api.openai.com/v1",
-      "apiKey": "your-openai-key",
-      "models": [{"id": "gpt-4", "name": "GPT-4"}]
-    }
-  }
-}
-```
-
----
-
-### 批量生成AI试戴图（可选）
-
-```bash
+# 后端启动（conda 环境 nail）
 cd backend
-python batch_generate.py --check     # 查看待生成数量
-python batch_generate.py --sample 3  # 测试3张
-python batch_generate.py             # 生成全部 325 张
+pip install -r requirements.txt
+python import_data.py      # 导入种子数据（用户/商家/款式/帖子）
+uvicorn app.main:app --host 0.0.0.0 --port 8190 --reload
+
+# 前端启动（新终端）
+cd frontend
+npm install
+npm run dev                 # 端口 4180
+
+# 单独导入帖子（可选，不影响已有数据）
+python import_posts.py
 ```
 
-### Docker 部署（可选）
+### 第三步：验证
 
 ```bash
-docker compose up -d --build
-# 前端：http://localhost:4180
-# API文档：http://localhost:8190/docs
+curl http://localhost:8190/api/health              # 后端健康检查
+curl http://localhost:8190/api/styles               # 款式列表（25款）
+curl http://localhost:8190/api/merchants            # 商家列表（3家）
 ```
+浏览器访问 `http://localhost:4180`
 
 ---
 
-## 📡 API 接口
+## API 接口
+
+### 试戴
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `GET` | `/api/health` | 健康检查 |
-| `GET` | `/api/tryon/hand-images` | 手图列表（上传历史 + 示例） |
+| `GET` | `/api/tryon/hand-images` | 手图列表（用户上传 + 预设） |
 | `POST` | `/api/tryon/upload-hand` | 上传手部照片 |
-| `POST` | `/api/tryon/try-on` | 执行AI试戴（缓存优先，缺失时实时生成） |
-| `GET` | `/api/tryon/history` | 试戴历史记录 |
-| `GET` | `/api/styles` | 款式列表（支持分类/搜索/排序/分页） |
-| `GET` | `/api/styles/{id}` | 款式详情（含统计数据） |
-| `GET` | `/api/styles/hot/ranking` | 热门排行（按热度分） |
-| `GET` | `/api/analytics/overview` | 运营总览数据 |
-| `GET` | `/api/analytics/trends` | N日趋势数据 |
-| `POST` | `/api/operations/chat` | AI助手对话（OpenClaw + MiMo） |
-| `POST` | `/api/operations/reports/generate` | 生成日报/趋势/策略报告 |
+| `POST` | `/api/tryon/try-on` | 执行AI试戴（缓存优先，支持 force_regenerate 重新生成） |
+| `GET` | `/api/tryon/history` | 试戴历史记录（分页） |
+| `DELETE` | `/api/tryon/hand-images/{id}` | 删除手图（不级联删历史） |
+| `DELETE` | `/api/tryon/history/{id}` | 删除单条试戴记录 |
 
-完整 Swagger 文档：`http://localhost:8190/docs`
+### 款式
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/styles` | 款式列表（支持分类/色调/场景/商家/搜索/排序/分页） |
+| `GET` | `/api/styles/{id}` | 款式详情（含商家信息） |
+| `GET` | `/api/styles/hot/ranking` | 热门排行 |
+| `GET` | `/api/styles/categories` | 所有分类及数量 |
+
+### 帖子社区
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/posts` | 帖子列表（推荐/最新/搜索/分类/分页） |
+| `GET` | `/api/posts/{id}` | 帖子详情（含款式关联、相关推荐） |
+| `POST` | `/api/posts` | 发布帖子（标题/正文/多图） |
+| `DELETE` | `/api/posts/{id}` | 删除帖子 |
+| `POST` | `/api/posts/{id}/like` | 点赞/取消点赞 |
+| `POST` | `/api/posts/upload-image` | 上传帖子图片 |
+
+### 商家
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/merchants` | 商家列表（按城市筛选/排序/分页） |
+| `GET` | `/api/merchants/{id}` | 商家详情（含款式列表/时段/店面图片） |
+| `GET` | `/api/merchants/cities` | 城市列表 |
+| `POST` | `/api/merchants/join` | 商家入驻（每账号仅一次，须上传店面图） |
+| `POST` | `/api/merchants/upload-image` | 上传店面图片 |
+| `GET` | `/api/merchants/{id}/slots` | 查询可用预约时段及容量 |
+
+### 预约
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/appointments` | 创建预约 |
+| `GET` | `/api/appointments` | 用户预约列表 |
+| `GET` | `/api/appointments/{id}` | 预约详情 |
+| `PUT` | `/api/appointments/{id}` | 更新预约状态 |
+| `DELETE` | `/api/appointments/{id}` | 取消预约 |
+
+### 商家后台
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/admin/styles` | 款式列表（商家视角） |
+| `POST` | `/api/admin/styles` | 新建款式 |
+| `PUT` | `/api/admin/styles/{id}` | 编辑款式 |
+| `DELETE` | `/api/admin/styles/{id}` | 下架款式 |
+| `POST` | `/api/admin/styles/{id}/image` | 设置款式图片 |
+| `GET` | `/api/admin/appointments` | 预约列表（商家视角） |
+| `PUT` | `/api/admin/appointments/{id}` | 修改预约状态 |
+| `GET` | `/api/admin/merchant-profile` | 商家店铺信息 |
+| `PUT` | `/api/admin/merchant-profile` | 更新店铺信息（含时段配置） |
+
+完整 Swagger：`http://localhost:8190/docs`
 
 ---
 
-## 🗂️ 项目结构
+## 项目结构
 
 ```
 nail-vista/
 ├── frontend/                       # React 19 + Vite + TypeScript
-│   ├── src/
-│   │   ├── pages/                  # 首页/试戴/款式浏览/运营看板
-│   │   ├── components/common/      # 主布局
-│   │   └── services/api.ts         # Axios API 层
-│   ├── public/static/              # 本地图片资源
-│   └── vite.config.ts
+│   └── src/
+│       ├── pages/                  # Community / TryOn / Merchants / Dashboard / Chat ...
+│       ├── components/             # Layout / AppointmentModal
+│       └── services/               # api.ts / image.ts
 ├── backend/                        # FastAPI + Python 3.12
 │   ├── app/
-│   │   ├── api/                    # 试戴/款式/分析/运营
-│   │   ├── core/                   # 配置/数据库
-│   │   ├── models/                 # SQLAlchemy 模型（6张表）
-│   │   └── services/               # 试戴引擎/百炼服务/趋势分析
-│   ├── batch_generate.py           # 批量AI生图脚本
-│   ├── import_data.py              # 数据种子脚本
-│   ├── .env.example                # 配置文件模板（仅 DASHSCOPE_API_KEY）
-│   └── requirements.txt
-├── .openclaw/                     # OpenClaw 项目内配置（自包含，提交到仓库）
-│   ├── agents/                    # Agent 定义：xiaomei + ops
-│   ├── openclaw.json              # 主配置文件（密钥通过环境变量注入）
-│   └── openclaw.json.example      # 配置模板
-├── docker-compose.yml              # Docker 一键部署
-├── PLAN.md                         # 完整项目规划
+│   │   ├── api/                    # tryon_api / posts / styles / merchants / appointments / admin / auth / chat ...
+│   │   ├── core/                   # config / database / security / logger
+│   │   ├── models/                 # SQLAlchemy 模型
+│   │   ├── services/               # bailian_service / local_image_service / tryon_engine
+│   │   └── schemas/                # Pydantic 请求/响应
+│   ├── static/                     # 图片资源（styles / hands / merchants / posts / results）
+│   ├── import_data.py              # 全量数据导入脚本
+│   ├── import_posts.py             # 帖子单独导入（不影响已有数据）
+│   ├── batch_generate.py           # 批量AI生图
+│   └── .env.example
+├── docker-compose.yml
+├── PLAN.md
 └── README.md
 ```
 
 ---
 
-## 📊 数据库
+## 数据库
 
-| 表名 | 说明 | 数据量 |
-|------|------|--------|
-| `nail_styles` | 美甲款式库（25款，8种分类） | 25 |
-| `hand_images` | 手部照片 | 13+ |
-| `tryon_records` | 试戴记录 | 200+ |
-| `style_metrics` | 日级运营指标（25款×30天） | 750 |
-| `operations_reports` | AI生成报告 | 按需 |
-| `user_feedback` | 用户反馈 | 按需 |
+| 表名 | 说明 |
+|------|------|
+| `users` | 用户（含角色：user / merchant） |
+| `merchants` | 商家（含店面图片/时段配置/标签） |
+| `nail_styles` | 美甲款式（关联商家） |
+| `posts` | 帖子（多图/关联款式） |
+| `post_likes` | 帖子点赞 |
+| `appointments` | 预约记录 |
+| `hand_images` | 手部照片（用户上传 + 预设） |
+| `tryon_effects` | 试戴效果记录 |
+| `user_favorite_merchants / user_favorite_styles` | 用户收藏 |
 
-默认使用 **SQLite**（零配置），设置 `USE_POSTGRES=1` 可切换 PostgreSQL。
+默认使用 **MySQL**。
 
 ---
 
-## 🎯 核心功能
+## 核心功能说明
 
-### 试戴缓存策略
+### AI试戴
 
 ```
-hand_01 + style_05 → results/hand_01+style_05.png
-                        ↑
-                   ┌────┴────┐
-                   │ 是否存在？│
-                   └────┬────┘
-                   Yes ↓  ↓ No
-                直接返回  调用百炼生成 → 保存到 results/
-                          └→ 失败 → MediaPipe+OpenCV 合成
+选择商家 → 选择手图 → 选择款式 → 百炼 qwen-image-2.0-pro-2026-04-22 生图
+                                                    ↓
+                            结果缓存 results/hand_{id}_style_{id}.png
+                          再次相同组合 → 秒出（缓存命中）
+                          重新生成 → 覆盖缓存 + 更新 DB 记录
 ```
 
-- 首次试戴某组合：**约5-10秒**（百炼AI生成）
-- 再次试戴同一组合：**秒出**（磁盘缓存命中）
-- 百炼不可用：**自动降级** 到 MediaPipe + OpenCV 实时合成
+- 超时配置：生成 300s / 下载 120s / 前端 310s
+- 全链路中文日志：`[试戴]` + `[百炼生图]` 标签
+- 试戴历史：卡片网格 + 分页 + 点击回填
 
-### 智能运营
+### 帖子发布
 
-- **热度分算法**：`试戴×0.4 + 收藏×0.25 + 浏览×0.2 + 分享×0.1 + 时长加成`
-- **OpenClaw AI**：实时对话、日报生成、趋势分析、策略推荐（支持 MiMo V2.5 及其他模型）
+- 标题（必填）、正文（可选，500字）、图片（可选，最多3张）
+- 多图上传：逐个调用上传接口，返回 URL 列表一次提交
+- 灵感广场卡片只展示标题（不加粗），详情页展示完整内容
 
----
+### 商家入驻
 
-## 🔑 环境变量
+- 每账号仅一次入驻机会（后端双校验）
+- 须上传至少 1 张、最多 3 张店面图片
+- 详情页横向轮播展示店面图（autoplay 4s，点击放大）
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `DASHSCOPE_API_KEY` | 阿里百炼图生模型 Key（可选） | 空 |
-| `USE_POSTGRES` | 使用 PostgreSQL | `false` |
-| `DATABASE_URL` | 自定义数据库连接 | 自动生成 |
-| `DEBUG` | 调试模式 | `true` |
+### 时段管理（商家后台）
 
-> OpenClaw 所有配置（含 API Key）均在 `.openclaw/openclaw.json` 中管理，无需设置操作系统环境变量。
-
----
-
-## 📝 开发阶段
-
-- [x] Phase 1：环境搭建与项目初始化
-- [x] Phase 2：数据层与基础 API
-- [x] Phase 3：AI试戴模块（MediaPipe + OpenCV）
-- [x] Phase 4：智能运营模块（OpenClaw + MiMo）
-- [x] Phase 5：联调展示与文档
+- JSON 数组存储：`[{start: "09:00", end: "10:00", max_bookings: 2}, ...]`
+- 添加/编辑/删除 + 保存按钮（本地暂存后一次性提交）
+- 用户预约时展示各时段剩余容量
 
 ---
 
-## 📄 许可证
+## 开发阶段
+
+- [x] 基础环境与项目初始化
+- [x] 数据模型与 API 基础
+- [x] AI试戴模块（百炼图生模型 + 缓存 + 历史）
+- [x] 帖子社区（灵感广场 + 发布 + 多图）
+- [x] 商家系统（入驻 + 店面图 + 时段管理）
+- [x] 预约系统（商家款式下拉 + 时段容量）
+- [x] 商家后台（数据概览 + 款式 + 预约 + 时段）
+
+---
+
+## 许可证
 
 MIT © 2026
 
 ---
 
 <div align="center">
-<sub>Built with 💅 by 龙猫队 · Powered by OpenClaw & 百炼 AI</sub>
+<sub>Built with 💅 by 龙猫队 · Powered by 百炼 AI</sub>
 </div>
