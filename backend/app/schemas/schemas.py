@@ -108,6 +108,7 @@ class PostCreate(BaseModel):
     title: str = Field(..., max_length=256)
     content: Optional[str] = ""
     image_url: Optional[str] = ""
+    images: Optional[List[str]] = []  # 多图：最多3张
     style_id: Optional[int] = None
 
 class PostOut(BaseModel):
@@ -115,6 +116,7 @@ class PostOut(BaseModel):
     title: str
     content: str
     image_url: str
+    images: List[str] = []
     user_id: int
     author_name: Optional[str] = ""
     author_avatar: Optional[str] = ""

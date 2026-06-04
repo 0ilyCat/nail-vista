@@ -76,6 +76,7 @@ class Merchant(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     tags = Column(JSON, default=list)
+    time_slots = Column(JSON, default=list)  # [{"start":"09:00","end":"10:00","max_bookings":2},...]
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 关联的运营账号
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
@@ -159,7 +160,8 @@ class Post(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(256), nullable=False)
     content = Column(Text, default="")
-    image_url = Column(String(512), default="")
+    image_url = Column(String(512), default="")  # 兼容保留，主图
+    images = Column(JSON, default=list)  # 多图: ["path1", "path2", ...]
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     style_id = Column(Integer, ForeignKey("nail_styles.id"), nullable=True)
     likes_count = Column(Integer, default=0)

@@ -44,14 +44,8 @@ class Settings(BaseSettings):
     # 阿里百炼图生模型 (AI试戴)
     DASHSCOPE_API_KEY: str = ""
 
-    # 阿里云 OSS 对象存储
-    OSS_ACCESS_KEY_ID: str = ""
-    OSS_ACCESS_KEY_SECRET: str = ""
-    OSS_ENDPOINT: str = "oss-cn-beijing.aliyuncs.com"
-    OSS_BUCKET: str = "tlias325"
-
-    # 图片访问URL (OSS 公开读，部署时修改为实际域名)
-    IMAGE_BASE_URL: str = "https://tlias325.oss-cn-beijing.aliyuncs.com"
+    # 本地图片存储 (图片通过 /api/getImg?name= 访问)
+    IMAGE_BASE_URL: str = ""  # 留空，前端使用相对路径 /api/getImg
 
     @property
     def database_url(self) -> str:

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Input, Button, Dropdown, Avatar, Space, Badge, Modal, Upload, message } from 'antd';
+import { Layout, Menu, Input, Button, Dropdown, Avatar, Space, Badge } from 'antd';
 import {
   HomeOutlined, CompassOutlined, ExperimentOutlined, MessageOutlined,
   ShopOutlined, UserOutlined, HeartOutlined, DashboardOutlined,
-  CalendarOutlined, SearchOutlined, PlusOutlined, LogoutOutlined, LoginOutlined,
+  CalendarOutlined, SearchOutlined, LogoutOutlined, LoginOutlined,
 } from '@ant-design/icons';
 
 const { Header, Content, Footer } = Layout;
@@ -14,11 +14,6 @@ export default function AppLayout() {
   const loc = useLocation();
   const [user, setUser] = useState<any>(null);
   const [searchVal, setSearchVal] = useState('');
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [pubTitle, setPubTitle] = useState('');
-  const [pubContent, setPubContent] = useState('');
-  const [pubFile, setPubFile] = useState<File | null>(null);
-  const [pubStyleId, setPubStyleId] = useState<number | null>(null);
 
   useEffect(() => {
     const u = localStorage.getItem('user');
@@ -34,23 +29,6 @@ export default function AppLayout() {
 
   const onSearch = () => {
     if (searchVal.trim()) nav(`/search?q=${encodeURIComponent(searchVal.trim())}`);
-  };
-
-  const onPublish = async () => {
-    if (!pubTitle.trim()) { message.warning('请输入标题'); return; }
-    try {
-      const { postsAPI } = await import('../services/api');
-      let imageUrl = '';
-      if (pubFile) {
-        const res = await postsAPI.uploadImage(pubFile);
-        imageUrl = res.data.image_url;
-      }
-      await postsAPI.create({ title: pubTitle, content: pubContent, image_url: imageUrl, style_id: pubStyleId });
-      message.success('发布成功');
-      setPublishOpen(false);
-      setPubTitle(''); setPubContent(''); setPubFile(null); setPubStyleId(null);
-      window.location.reload();
-    } catch (e: any) { message.error(e.response?.data?.detail || '发布失败'); }
   };
 
   const menuItems = [
@@ -102,11 +80,6 @@ export default function AppLayout() {
         NailVista ©2026 · AI美甲试戴平台
       </Footer>
 
-      <Modal title="发布新帖子" open={publishOpen} onOk={onPublish} onCancel={() => setPublishOpen(false)} okText="提交发布">
-        <Input placeholder="标题" value={pubTitle} onChange={e => setPubTitle(e.target.value)} style={{ marginBottom: 12 }} />
-        <Input.TextArea placeholder="正文内容" value={pubContent} onChange={e => setPubContent(e.target.value)} rows={4} style={{ marginBottom: 12 }} />
-        <input type="file" accept="image/*" onChange={e => setPubFile(e.target.files?.[0] || null)} />
-      </Modal>
     </Layout>
   );
 }

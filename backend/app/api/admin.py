@@ -16,6 +16,7 @@ from app.core.logger import get_logger
 from app.models.models import User, Merchant, NailStyle, Post, Appointment
 from app.schemas.schemas import NailStyleOut, MerchantOut, PostOut
 from app.api.auth import get_current_user
+from app.services.local_image_service import get_image_url
 
 router = APIRouter()
 logger = get_logger("admin")
@@ -176,22 +177,20 @@ async def upload_style_image(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """上传款式图片到 OSS"""
+    """上传款式图片到本地存储"""
     logger.info(f"POST /admin/styles/upload-image file={file.filename} user={user.id}")
     await _require_merchant(user, db)
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
 
-    from app.services.oss_service import upload_bytes, generate_oss_key
+    from app.services.local_image_service import save_image, get_image_url
 
-    ext = Path(file.filename).suffix if file.filename else ".png"
     content = await file.read()
-    oss_key = generate_oss_key("styles", file.filename, ext)
-    public_url = upload_bytes(content, oss_key, file.content_type or "image/png")
+    image_path = save_image(content, "styles", file.filename)
 
-    logger.info(f"POST /admin/styles/upload-image done key={oss_key}")
-    return {"image_url": oss_key, "full_url": public_url, "message": "上传成功"}
+    logger.info(f"POST /admin/styles/upload-image done path={image_path}")
+    return {"image_url": image_path, "full_url": get_image_url(image_path), "message": "上传成功"}
 
 
 @router.post("/admin/styles/{style_id}/image")
@@ -214,18 +213,16 @@ async def set_style_image(
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
 
-    from app.services.oss_service import upload_bytes, generate_oss_key
+    from app.services.local_image_service import save_image
 
-    ext = Path(file.filename).suffix if file.filename else ".png"
     content = await file.read()
-    oss_key = generate_oss_key("styles", file.filename, ext)
-    upload_bytes(content, oss_key, file.content_type or "image/png")
+    image_path = save_image(content, "styles", file.filename)
 
-    style.image_url = oss_key
+    style.image_url = image_path
     await db.flush()
 
-    logger.info(f"POST /admin/styles/{style_id}/image done key={oss_key}")
-    return {"image_url": oss_key, "message": "图片已更新"}
+    logger.info(f"POST /admin/styles/{style_id}/image done path={image_path}")
+    return {"image_url": image_path, "message": "图片已更新"}
 
 
 # ═══════════════════════════════════════════════════
@@ -275,7 +272,7 @@ async def list_merchant_appointments(
             s = sr.scalar_one_or_none()
             if s:
                 style_name = s.name
-                style_image = settings.IMAGE_BASE_URL + "/" + (s.image_url or "").lstrip("/") if s.image_url else ""
+                style_image = get_image_url(s.image_url) if s.image_url else ""
 
         items.append({
             "id": a.id, "user_id": a.user_id, "user_name": uname,
@@ -316,3 +313,59 @@ async def update_appointment_status(
 
     logger.info(f"PUT /admin/appointments/{appointment_id} status updated to {body.status}")
     return {"ok": True, "message": f"预约状态已更新为 {body.status}", "appointment_id": appointment_id}
+
+
+# ═══════════════════════════════════════════════════
+# 商家信息管理（自身店铺）
+# ═══════════════════════════════════════════════════
+
+class MerchantProfileUpdate(BaseModel):
+    description: Optional[str] = None
+    phone: Optional[str] = None
+    business_hours: Optional[str] = None
+    address: Optional[str] = None
+    tags: Optional[list] = None
+    time_slots: Optional[list] = None
+
+
+@router.get("/admin/merchant-profile")
+async def get_merchant_profile(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前商家自己的店铺信息"""
+    logger.info(f"GET /admin/merchant-profile user={user.id}")
+    merchant = await _require_merchant(user, db)
+
+    return {
+        "id": merchant.id, "name": merchant.name,
+        "description": merchant.description or "",
+        "city": merchant.city or "", "district": merchant.district or "",
+        "address": merchant.address or "",
+        "business_hours": merchant.business_hours or "",
+        "phone": merchant.phone or "", "rating": merchant.rating or 5.0,
+        "review_count": merchant.review_count or 0,
+        "tags": merchant.tags or [],
+        "time_slots": merchant.time_slots or [],
+        "created_at": str(merchant.created_at) if merchant.created_at else "",
+    }
+
+
+@router.put("/admin/merchant-profile")
+async def update_merchant_profile(
+    body: MerchantProfileUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新当前商家店铺信息（含时段配置）"""
+    logger.info(f"PUT /admin/merchant-profile user={user.id}")
+    merchant = await _require_merchant(user, db)
+
+    update_data = body.model_dump(exclude_none=True)
+    for field, value in update_data.items():
+        setattr(merchant, field, value)
+
+    await db.flush()
+    logger.info(f"PUT /admin/merchant-profile updated fields={list(update_data.keys())}")
+    return {"ok": True, "message": "店铺信息已更新"}
+

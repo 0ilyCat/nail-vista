@@ -99,25 +99,22 @@ async def upload_avatar(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """上传用户头像到 OSS"""
+    """上传用户头像到本地存储"""
     logger.info(f"上传头像 | user={user.id} file={file.filename}")
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
 
-    from app.services.oss_service import upload_bytes, generate_oss_key
-    from pathlib import Path
+    from app.services.local_image_service import save_image
 
-    ext = Path(file.filename).suffix if file.filename else ".png"
     content = await file.read()
-    oss_key = generate_oss_key("avatars", file.filename, ext)
-    upload_bytes(content, oss_key, file.content_type or "image/png")
+    image_path = save_image(content, "avatars", file.filename)
 
-    user.avatar_url = oss_key
+    user.avatar_url = image_path
     await db.flush()
 
-    logger.info(f"头像上传完成 | user={user.id} key={oss_key}")
-    return {"avatar_url": oss_key, "message": "上传成功"}
+    logger.info(f"头像上传完成 | user={user.id} path={image_path}")
+    return {"avatar_url": image_path, "message": "上传成功"}
 
 
 @router.get("/auth/stats")

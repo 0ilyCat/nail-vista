@@ -1,5 +1,5 @@
 """
-AI 美甲试戴 API — 图片存储于阿里云 OSS，试戴使用百炼图生模型
+AI 美甲试戴 API — 本地图片存储，试戴使用百炼 qwen-image-2.0-pro-2026-04-22 图生模型
 """
 import uuid
 from pathlib import Path
@@ -7,7 +7,7 @@ import tempfile
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, delete, update
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.models import User, NailStyle, HandImage, TryonEffect
 from app.api.auth import get_current_user
-from app.services.oss_service import upload_bytes, download_to_local, generate_oss_key, get_public_url
+from app.services.local_image_service import save_image, save_image_with_name, get_image_url, get_local_path
 
 router = APIRouter()
 logger = get_logger("tryon")
@@ -26,15 +26,16 @@ class TryOnRequest(BaseModel):
     """试戴请求体"""
     hand_image_id: int
     style_id: int
+    force_regenerate: bool = False
 
 
-def _full_url(key: str) -> str:
-    """将 OSS key 转为完整访问 URL"""
-    if not key:
+def _full_url(path: str) -> str:
+    """将本地存储路径转为前端访问 URL"""
+    if not path:
         return ""
-    if key.startswith("http"):
-        return key
-    return f"{settings.IMAGE_BASE_URL}/{key}"
+    if path.startswith("http"):
+        return path
+    return get_image_url(path)
 
 
 @router.get("/tryon/hand-images")
@@ -68,17 +69,11 @@ async def upload_hand(
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
 
-    ext = Path(file.filename).suffix if file.filename else ".png"
-    mime = file.content_type or "image/png"
-
-    # 上传到 OSS
-    oss_key = generate_oss_key("hands", file.filename, ext)
     data = await file.read()
-    upload_bytes(data, oss_key, mime)
+    image_path = save_image(data, "hands", file.filename)
 
-    # 数据库存 OSS key
     img = HandImage(
-        user_id=user.id, image_url=oss_key,
+        user_id=user.id, image_url=image_path,
         skin_tone="", hand_type="", is_preset=False,
     )
     db.add(img)
@@ -87,7 +82,7 @@ async def upload_hand(
 
     return {
         "id": img.id, "user_id": img.user_id,
-        "image_url": _full_url(oss_key),
+        "image_url": _full_url(image_path),
         "skin_tone": "", "hand_type": "", "is_preset": False,
         "created_at": str(img.created_at),
     }
@@ -99,10 +94,11 @@ async def do_tryon(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """AI试戴 — 仅使用百炼 qwen-image 图生模型，图片从 OSS 下载后送 API"""
+    """AI试戴 — 使用百炼 qwen-image-2.0-pro-2026-04-22 图生模型"""
     hand_image_id = req.hand_image_id
     style_id = req.style_id
-    logger.info(f"POST /tryon/try-on hand={hand_image_id} style={style_id} user={user.id}")
+    force_regenerate = req.force_regenerate
+    logger.info(f"[试戴] 收到请求 手图ID={hand_image_id} 款式ID={style_id} 用户ID={user.id} 强制重新生成={force_regenerate}")
 
     hand = await db.get(HandImage, hand_image_id)
     if not hand:
@@ -111,59 +107,76 @@ async def do_tryon(
     if not style:
         raise HTTPException(status_code=404, detail="款式不存在")
 
-    # 缓存检查：按 hand_id + style_id 组合
-    cache_key = f"results/hand_{hand_image_id}_style_{style_id}.png"
-    cache_url = _full_url(cache_key)
+    logger.info(f"[试戴] 手图={hand.image_url} 款式={style.name}")
 
-    # 简单 HEAD 检查缓存是否存在（OSS 公开读）
-    import httpx
-    try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.head(cache_url)
-            if r.status_code == 200:
-                logger.info(f"Cache hit: {cache_key}")
-                effect = TryonEffect(user_id=user.id, hand_image_id=hand_image_id, style_id=style_id, result_url=cache_key)
-                db.add(effect)
-                style.tryon_count = (style.tryon_count or 0) + 1
-                await db.flush()
-                return {"status": "completed", "result_url": cache_url, "style_name": style.name, "source": "cache"}
-    except Exception:
-        pass  # HEAD 失败继续生成
+    # 缓存检查
+    cache_path = f"results/hand_{hand_image_id}_style_{style_id}.png"
+    cache_local = get_local_path(cache_path)
+    cache_url = _full_url(cache_path)
 
-    # 调用百炼 API — 需要本地文件
+    if not force_regenerate and cache_local.exists():
+        logger.info(f"[试戴] 缓存命中 路径={cache_path}")
+        existing = await db.execute(
+            select(TryonEffect).where(
+                TryonEffect.user_id == user.id,
+                TryonEffect.hand_image_id == hand_image_id,
+                TryonEffect.style_id == style_id,
+            )
+        )
+        existing_effect = existing.scalars().first()
+        if not existing_effect:
+            effect = TryonEffect(user_id=user.id, hand_image_id=hand_image_id, style_id=style_id, result_url=cache_path)
+            db.add(effect)
+            style.tryon_count = (style.tryon_count or 0) + 1
+            await db.flush()
+        return {"status": "completed", "result_url": cache_url, "style_name": style.name, "source": "cache"}
+
+    # 调用百炼 API
     api_key = settings.DASHSCOPE_API_KEY
     if not api_key:
+        logger.error("[试戴] DASHSCOPE_API_KEY 未配置")
         raise HTTPException(status_code=503, detail="DASHSCOPE_API_KEY 未配置，无法使用AI试戴")
 
+    hand_local = get_local_path(hand.image_url)
+    style_local = get_local_path(style.image_url)
+
+    if not hand_local.exists():
+        raise HTTPException(status_code=500, detail=f"手图文件丢失: {hand.image_url}")
+    if not style_local.exists():
+        raise HTTPException(status_code=500, detail=f"款式图片丢失: {style.image_url}")
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        hand_local = str(Path(tmpdir) / "hand.png")
-        style_local = str(Path(tmpdir) / "style.png")
         result_local = str(Path(tmpdir) / "result.png")
 
-        # 从 OSS 下载到本地临时文件
-        if not download_to_local(hand.image_url, hand_local):
-            raise HTTPException(status_code=500, detail="手图下载失败")
-        if not download_to_local(style.image_url, style_local):
-            raise HTTPException(status_code=500, detail="款式图片下载失败")
-
-        # 调用百炼生成
         from app.services.bailian_service import generate_tryon_image
-        success, msg = await generate_tryon_image(hand_local, style_local, result_local, api_key)
+        success, msg = await generate_tryon_image(str(hand_local), str(style_local), result_local, api_key)
 
         if not success:
-            logger.error(f"Bailian failed: {msg}")
+            logger.error(f"[试戴] 百炼生成失败 原因={msg}")
             raise HTTPException(status_code=500, detail=f"AI试戴生成失败: {msg}")
 
-        # 上传结果到 OSS
         with open(result_local, "rb") as f:
-            upload_bytes(f.read(), cache_key, "image/png")
+            save_image_with_name(f.read(), cache_path)
 
-    # 保存记录
-    effect = TryonEffect(user_id=user.id, hand_image_id=hand_image_id, style_id=style_id, result_url=cache_key)
-    db.add(effect)
-    style.tryon_count = (style.tryon_count or 0) + 1
-    await db.flush()
+    # 保存/更新数据库记录
+    existing = await db.execute(
+        select(TryonEffect).where(
+            TryonEffect.user_id == user.id,
+            TryonEffect.hand_image_id == hand_image_id,
+            TryonEffect.style_id == style_id,
+        )
+    )
+    existing_effect = existing.scalars().first()
+    if existing_effect:
+        existing_effect.result_url = cache_path
+        await db.flush()
+    else:
+        effect = TryonEffect(user_id=user.id, hand_image_id=hand_image_id, style_id=style_id, result_url=cache_path)
+        db.add(effect)
+        style.tryon_count = (style.tryon_count or 0) + 1
+        await db.flush()
 
+    logger.info(f"[试戴] 生成成功 结果路径={cache_url}")
     return {"status": "completed", "result_url": cache_url, "style_name": style.name, "source": "bailian"}
 
 
@@ -197,9 +210,58 @@ async def tryon_history(
             "hand_image_url": _full_url(e.hand_image.image_url) if e.hand_image else "",
             "style_id": e.style_id,
             "style_name": e.style.name if e.style else "",
+            "merchant_id": e.style.merchant_id if e.style else None,
             "result_url": _full_url(e.result_url) if e.result_url else "",
             "created_at": str(e.created_at),
         })
 
     return {"items": items, "total": total, "page": page, "page_size": page_size,
             "total_pages": ceil(total / page_size) if total > 0 else 0}
+
+
+@router.delete("/tryon/hand-images/{hand_image_id}")
+async def delete_hand_image(
+    hand_image_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除手图（预设和用户上传均支持），不删除关联试戴记录"""
+    logger.info(f"DELETE /tryon/hand-images/{hand_image_id} user={user.id}")
+
+    hand = await db.get(HandImage, hand_image_id)
+    if not hand:
+        raise HTTPException(status_code=404, detail="手图不存在")
+    # 预设手图：所有用户均可删除；用户手图：仅本人可删
+    if not hand.is_preset and hand.user_id != user.id:
+        raise HTTPException(status_code=403, detail="无权删除该手图")
+
+    # 不级联删除试戴历史，仅解除关联（hand_image_id 置空）
+    await db.execute(
+        update(TryonEffect).where(TryonEffect.hand_image_id == hand_image_id).values(hand_image_id=None)
+    )
+
+    await db.delete(hand)
+    await db.commit()
+    logger.info(f"手图已删除 id={hand_image_id}")
+    return {"message": "删除成功"}
+
+
+@router.delete("/tryon/history/{effect_id}")
+async def delete_history_record(
+    effect_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除单条试戴历史记录"""
+    logger.info(f"DELETE /tryon/history/{effect_id} user={user.id}")
+
+    effect = await db.get(TryonEffect, effect_id)
+    if not effect:
+        raise HTTPException(status_code=404, detail="试戴记录不存在")
+    if effect.user_id != user.id:
+        raise HTTPException(status_code=403, detail="无权删除该记录")
+
+    await db.delete(effect)
+    await db.commit()
+    logger.info(f"试戴记录已删除 id={effect_id}")
+    return {"message": "删除成功"}

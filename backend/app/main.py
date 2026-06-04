@@ -78,7 +78,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # 路由注册
 # ============================================================
 from app.api import auth, styles, posts, merchants, appointments
-from app.api import chat, tryon_api, favorites, search, dashboard, admin
+from app.api import chat, tryon_api, favorites, search, dashboard, admin, image_api
 
 app.include_router(auth.router, prefix=settings.API_PREFIX, tags=["认证"])
 app.include_router(styles.router, prefix=settings.API_PREFIX, tags=["美甲款式"])
@@ -91,6 +91,7 @@ app.include_router(favorites.router, prefix=settings.API_PREFIX, tags=["收藏"]
 app.include_router(search.router, prefix=settings.API_PREFIX, tags=["搜索"])
 app.include_router(dashboard.router, prefix=settings.API_PREFIX, tags=["商家仪表盘"])
 app.include_router(admin.router, prefix=settings.API_PREFIX, tags=["管理员"])
+app.include_router(image_api.router, prefix=settings.API_PREFIX, tags=["图片服务"])
 
 
 @app.get(f"{settings.API_PREFIX}/health")

@@ -71,6 +71,14 @@ export const merchantsAPI = {
   getDetail: (id: number) => api.get(`/merchants/${id}`),
   cities: () => api.get('/merchants/cities'),
   styles: (id: number, params?: any) => api.get(`/merchants/${id}/styles`, { params }),
+  getSlots: (id: number, date?: string) => api.get(`/merchants/${id}/slots`, { params: date ? { date } : {} }),
+  getTags: () => api.get('/tags'),
+  uploadImage: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/merchants/upload-image', fd);
+  },
+  join: (data: any) => api.post('/merchants/join', data),
 };
 
 // ============ 预约 ============
@@ -98,8 +106,11 @@ export const tryonAPI = {
     fd.append('file', file);
     return api.post('/tryon/upload-hand', fd);
   },
-  tryOn: (data: { hand_image_id: number; style_id: number }) => api.post('/tryon/try-on', data),
+  tryOn: (data: { hand_image_id: number; style_id: number; force_regenerate?: boolean }) =>
+    api.post('/tryon/try-on', data, { timeout: 310000 }),
   history: (params?: any) => api.get('/tryon/history', { params }),
+  deleteHand: (id: number) => api.delete(`/tryon/hand-images/${id}`),
+  deleteHistory: (id: number) => api.delete(`/tryon/history/${id}`),
 };
 
 // ============ 收藏 ============
@@ -143,6 +154,9 @@ export const adminAPI = {
   listAppointments: (params?: any) => api.get('/admin/appointments', { params }),
   updateAppointment: (id: number, status: string) =>
     api.put(`/admin/appointments/${id}`, { status }),
+  // 店铺信息（含时段配置）
+  getProfile: () => api.get('/admin/merchant-profile'),
+  updateProfile: (data: any) => api.put('/admin/merchant-profile', data),
 };
 
 export default api;

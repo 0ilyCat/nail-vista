@@ -22,12 +22,15 @@ router = APIRouter()
 logger = get_logger("nailvista.posts")
 
 
+from app.services.local_image_service import get_image_url
+
+
 def _image_url(path: str) -> str:
     if not path:
         return ""
     if path.startswith("http"):
         return path
-    return settings.IMAGE_BASE_URL + "/" + path.lstrip("/")
+    return get_image_url(path)
 
 
 # ──────────────────────── 可选认证依赖 ────────────────────────
@@ -110,11 +113,14 @@ async def list_posts(
 
     items = []
     for p in posts:
+        post_images = (p.images or [])
+        main_image = post_images[0] if post_images else p.image_url
         items.append({
             "id": p.id,
             "title": p.title,
             "content": p.content or "",
-            "image_url": _image_url(p.image_url),
+            "image_url": _image_url(main_image) if main_image else "",
+            "images": [_image_url(img) for img in post_images],
             "user_id": p.user_id,
             "author_name": p.author.nickname or p.author.username if p.author else "",
             "author_avatar": _image_url(p.author.avatar_url) if p.author else "",
@@ -226,6 +232,7 @@ async def post_detail(
         "title": post.title,
         "content": post.content or "",
         "image_url": _image_url(post.image_url),
+        "images": [_image_url(img) for img in (post.images or [])],
         "user_id": post.user_id,
         "author_name": author.nickname or author.username if author else "",
         "author_avatar": _image_url(author.avatar_url) if author else "",
@@ -259,6 +266,7 @@ async def create_post(
         title=body.title,
         content=body.content or "",
         image_url=body.image_url or "",
+        images=body.images or [],
         user_id=current_user.id,
         style_id=body.style_id,
     )
@@ -392,12 +400,10 @@ async def upload_image(
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "仅支持图片文件")
 
-    from app.services.oss_service import upload_bytes, generate_oss_key
+    from app.services.local_image_service import save_image
 
-    ext = Path(file.filename).suffix.lower() if file.filename else ".png"
     content = await file.read()
-    oss_key = generate_oss_key("posts", file.filename, ext)
-    public_url = upload_bytes(content, oss_key, file.content_type or "image/png")
+    image_path = save_image(content, "posts", file.filename)
 
-    logger.info(f"POST /posts/upload-image done | oss_key={oss_key}")
-    return {"image_url": oss_key, "full_url": public_url, "message": "上传成功"}
+    logger.info(f"POST /posts/upload-image done | path={image_path}")
+    return {"image_url": image_path, "full_url": get_image_url(image_path), "message": "上传成功"}

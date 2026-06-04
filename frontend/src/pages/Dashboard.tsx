@@ -9,7 +9,7 @@ import {
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   CheckOutlined, CloseOutlined, EyeOutlined, UploadOutlined,
-  CalendarOutlined, DollarOutlined, ShoppingOutlined,
+  CalendarOutlined, DollarOutlined, ShoppingOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, adminAPI } from '../services/api';
@@ -48,6 +48,13 @@ export default function DashboardPage() {
   const [appts, setAppts] = useState<any[]>([]);
   const [apptsLoading, setApptsLoading] = useState(false);
   const [apptFilter, setApptFilter] = useState<string | undefined>(undefined);
+
+  /* ──────── 时段管理 ──────── */
+  const [timeSlots, setTimeSlots] = useState<any[]>([]);
+  const [slotModalOpen, setSlotModalOpen] = useState(false);
+  const [editingSlotIdx, setEditingSlotIdx] = useState<number | null>(null);
+  const [slotForm, setSlotForm] = useState({ start: '09:00', end: '10:00', max_bookings: 2 });
+  const [slotSaving, setSlotSaving] = useState(false);
 
   /* ═══════════════════════════ 初始化 ═══════════════════════════ */
   useEffect(() => {
@@ -178,7 +185,65 @@ export default function DashboardPage() {
     });
   };
 
-  /* ═══════════════════════════ 加载中 ═══════════════════════════ */
+  /* ═══════════════════════════ 时段管理 ═══════════════════════════ */
+  const loadTimeSlots = async () => {
+    try {
+      const res = await adminAPI.getProfile();
+      setTimeSlots(res.data.time_slots || []);
+    } catch { /* ignore */ }
+  };
+
+  const openAddSlot = () => {
+    setEditingSlotIdx(null);
+    setSlotForm({ start: '09:00', end: '10:00', max_bookings: 2 });
+    setSlotModalOpen(true);
+  };
+
+  const openEditSlot = (idx: number) => {
+    setEditingSlotIdx(idx);
+    setSlotForm({ ...timeSlots[idx] });
+    setSlotModalOpen(true);
+  };
+
+  const onDeleteSlot = (idx: number) => {
+    setTimeSlots(prev => prev.filter((_, i) => i !== idx));
+    message.info('已移除时段，请点击「保存时段设置」生效');
+  };
+
+  const onSubmitSlot = () => {
+    if (!slotForm.start || !slotForm.end) {
+      message.warning('请填写起止时间');
+      return;
+    }
+    if (slotForm.start >= slotForm.end) {
+      message.warning('开始时间必须早于结束时间');
+      return;
+    }
+    if ((slotForm.max_bookings || 0) < 1) {
+      message.warning('可预约数至少为 1');
+      return;
+    }
+    if (editingSlotIdx !== null) {
+      setTimeSlots(prev => prev.map((s, i) => i === editingSlotIdx ? { ...slotForm } : s));
+    } else {
+      setTimeSlots(prev => [...prev, { ...slotForm }]);
+    }
+    setSlotModalOpen(false);
+    message.info('请点击「保存时段设置」保存到服务器');
+  };
+
+  const onSaveSlots = async () => {
+    setSlotSaving(true);
+    try {
+      await adminAPI.updateProfile({ time_slots: timeSlots });
+      message.success('时段设置已保存');
+      loadTimeSlots();
+    } catch (e: any) {
+      message.error(e.response?.data?.detail || '保存失败');
+    } finally {
+      setSlotSaving(false);
+    }
+  };
   if (pageLoading) {
     return <Spin size="large" style={{ display: 'block', margin: '200px auto' }} />;
   }
@@ -356,10 +421,65 @@ export default function DashboardPage() {
               </div>
             ),
           },
+
+          /* ════ Tab: 时段管理 ════ */
+          {
+            key: 'slots',
+            label: '🕐 时段管理',
+            children: (
+              <div>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#888', fontSize: 13 }}>
+                    设置每日可预约时段及每个时段的最大预约数，用户预约时将看到这些时段选项。
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button icon={<PlusOutlined />} onClick={openAddSlot}>添加时段</Button>
+                    <Button type="primary" icon={<ClockCircleOutlined />} onClick={onSaveSlots} loading={slotSaving}>
+                      保存时段设置
+                    </Button>
+                  </div>
+                </div>
+
+                {timeSlots.length === 0 ? (
+                  <Empty description="暂无预约时段，点击「添加时段」设置" />
+                ) : (
+                  <Table
+                    dataSource={timeSlots.map((s, i) => ({ ...s, key: i }))}
+                    rowKey="key"
+                    pagination={false}
+                    columns={[
+                      {
+                        title: '开始时间', dataIndex: 'start', width: 120,
+                        render: (v: string) => <Tag color="blue">{v}</Tag>,
+                      },
+                      {
+                        title: '结束时间', dataIndex: 'end', width: 120,
+                        render: (v: string) => <Tag color="blue">{v}</Tag>,
+                      },
+                      {
+                        title: '每时段最大预约数', dataIndex: 'max_bookings', width: 160, align: 'center' as const,
+                        render: (v: number) => <strong style={{ color: '#c77986' }}>{v || '-'}</strong>,
+                      },
+                      {
+                        title: '操作', width: 120,
+                        render: (_: any, __: any, idx: number) => (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <Button size="small" icon={<EditOutlined />} onClick={() => openEditSlot(idx)}>编辑</Button>
+                            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => onDeleteSlot(idx)}>删除</Button>
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </div>
+            ),
+          },
         ]}
         onChange={(key) => {
           if (key === 'styles') loadStyles();
           if (key === 'appointments') loadAppts();
+          if (key === 'slots') loadTimeSlots();
         }}
       />
 
@@ -431,6 +551,54 @@ export default function DashboardPage() {
                 ]} />
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* ════ 时段编辑 Modal ════ */}
+      <Modal
+        title={editingSlotIdx !== null ? '编辑时段' : '添加时段'}
+        open={slotModalOpen}
+        onCancel={() => setSlotModalOpen(false)}
+        onOk={onSubmitSlot}
+        okText="确定"
+        cancelText="取消"
+        width={400}
+        destroyOnHidden
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <label style={{ display: 'block', fontWeight: 500, marginBottom: 4 }}>开始时间</label>
+              <Input
+                value={slotForm.start}
+                onChange={e => setSlotForm({ ...slotForm, start: e.target.value })}
+                placeholder="09:00"
+                style={{ borderRadius: 8 }}
+              />
+            </Col>
+            <Col span={12}>
+              <label style={{ display: 'block', fontWeight: 500, marginBottom: 4 }}>结束时间</label>
+              <Input
+                value={slotForm.end}
+                onChange={e => setSlotForm({ ...slotForm, end: e.target.value })}
+                placeholder="10:00"
+                style={{ borderRadius: 8 }}
+              />
+            </Col>
+          </Row>
+          <div>
+            <label style={{ display: 'block', fontWeight: 500, marginBottom: 4 }}>该时段最大预约数</label>
+            <InputNumber
+              value={slotForm.max_bookings}
+              onChange={v => setSlotForm({ ...slotForm, max_bookings: v || 1 })}
+              min={1}
+              max={999}
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div style={{ color: '#999', fontSize: 12 }}>
+            例如设置 09:00-10:00 最大 2 人，则该时段超过 2 人预约后将显示「已满」。
+          </div>
         </div>
       </Modal>
     </div>

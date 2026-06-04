@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.models import User, Merchant, NailStyle, StyleTag, NailTag, UserFavoriteMerchant, UserFavoriteStyle
 from app.api.auth import get_current_user
+from app.services.local_image_service import get_image_url as _img_url
 
 router = APIRouter(prefix="/favorites")
 logger = get_logger("nailvista.favorites")
@@ -21,12 +22,12 @@ def _image_url(obj, field: str = "image_url") -> str:
     val = getattr(obj, field, "") or ""
     if not val:
         return ""
-    return f"{settings.IMAGE_BASE_URL}/{val}"
+    return _img_url(val)
 
 
 def _list_image_urls(obj) -> list:
     images = getattr(obj, "images", None) or []
-    return [f"{settings.IMAGE_BASE_URL}/{img}" for img in images]
+    return [_img_url(img) for img in images]
 
 
 # ════════════════════════════════════════════════════════════

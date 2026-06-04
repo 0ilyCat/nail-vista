@@ -8,7 +8,7 @@
 
 生成的图片保存在 results/{hand_name}+{style_name}.png
 
-API: 阿里百炼 qwen-image-2.0-pro 图编辑（多图融合）
+API: 阿里百炼 qwen-image-2.0-pro-2026-04-22 图编辑（多图融合）
 配置: .env 中设置 DASHSCOPE_API_KEY
 """
 import os
@@ -35,7 +35,7 @@ from app.core.config import get_settings
 settings = get_settings()
 DASHSCOPE_API_KEY = settings.DASHSCOPE_API_KEY
 BASE_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
-MODEL = "qwen-image-2.0-pro"
+MODEL = "qwen-image-2.0-pro-2026-04-22"
 
 STYLES_DIR = Path("static/styles")
 HANDS_DIR = Path("static/hands")

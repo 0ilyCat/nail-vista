@@ -1,11 +1,13 @@
 /**
- * 图片URL工具 — OSS 模式下直接返回完整URL，本地开发模式通过 Vite 代理到后端
+ * 图片URL工具 — 通过后端 /api/getImg 接口返回图片二进制流
+ *
+ * 正确用法: <img src="/api/getImg?name=styles/xxx.png">
+ * 错误用法: <img src="/usr/upload/a.jpg">（浏览器不能直接访问服务器磁盘）
  */
-const OSS_BASE = 'https://tlias325.oss-cn-beijing.aliyuncs.com';
-
 export function imgUrl(path: string | undefined | null): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  // OSS key: styles/style_01.png -> https://bucket.oss-cn-beijing.aliyuncs.com/styles/style_01.png
-  return `${OSS_BASE}/${path}`;
+  if (path.startsWith('/api/getImg')) return path;  // 后端已转换过，直接返回
+  // 本地路径: styles/style_01.png → /api/getImg?name=styles/style_01.png
+  return `/api/getImg?name=${encodeURIComponent(path)}`;
 }

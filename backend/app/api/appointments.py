@@ -15,6 +15,7 @@ from app.core.logger import get_logger
 from app.models.models import Appointment, Merchant, NailStyle, User
 from app.schemas.schemas import AppointmentCreate, AppointmentOut
 from app.api.auth import get_current_user
+from app.services.local_image_service import get_image_url as _img_url
 
 router = APIRouter(prefix="/appointments")
 logger = get_logger("nailvista.appointments")
@@ -27,7 +28,7 @@ class AppointmentStatusUpdate(BaseModel):
 def _image_url(image_url: str) -> str:
     if not image_url:
         return ""
-    return f"{settings.IMAGE_BASE_URL}/{image_url}"
+    return _img_url(image_url)
 
 
 def _appt_dict(a) -> dict:

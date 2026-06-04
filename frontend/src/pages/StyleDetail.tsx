@@ -1,48 +1,31 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Typography, Button, Spin, Tag, message, Modal, Input } from 'antd';
-import { stylesAPI, appointmentsAPI, favoritesAPI } from '../services/api';
+import { useParams, Link } from 'react-router-dom';
+import { Row, Col, Card, Typography, Button, Spin, Tag, message } from 'antd';
+import { stylesAPI, favoritesAPI } from '../services/api';
 import { imgUrl } from '../services/image';
+import AppointmentModal from '../components/AppointmentModal';
 
 const { Title, Paragraph } = Typography;
 
 export default function StyleDetailPage() {
   const { id } = useParams();
-  const nav = useNavigate();
   const [style, setStyle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [aptOpen, setAptOpen] = useState(false);
-  const [aptTime, setAptTime] = useState('');
-  const [aptNotes, setAptNotes] = useState('');
-  const [aptLoading, setAptLoading] = useState(false);
+  const [merchantId, setMerchantId] = useState<number>(0);
 
   useEffect(() => {
-    stylesAPI.getDetail(Number(id)).then(res => setStyle(res.data)).catch(() => message.error('款式加载失败')).finally(() => setLoading(false));
+    stylesAPI.getDetail(Number(id)).then(res => {
+      setStyle(res.data);
+      setMerchantId(res.data.merchant_id);
+    }).catch(() => message.error('款式加载失败')).finally(() => setLoading(false));
   }, [id]);
-
-  const onAppointment = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) { message.warning('请先登录'); nav('/login'); return; }
-    setAptLoading(true);
-    try {
-      await appointmentsAPI.create({
-        merchant_id: style.merchant_id, style_id: style.id,
-        service_item: style.name, appointment_time: aptTime || undefined,
-        notes: aptNotes, price: style.price,
-      });
-      message.success('预约成功！商家将尽快与您确认');
-      setAptOpen(false);
-      setAptTime(''); setAptNotes('');
-    } catch (e: any) {
-      message.error(e.response?.data?.detail || '预约失败，请重试');
-    } finally { setAptLoading(false); }
-  };
 
   const onFavorite = async () => {
     try {
       await favoritesAPI.toggleStyle(style.id);
       message.success('已收藏');
-    } catch (e: any) { message.warning('请先登录'); }
+    } catch { message.warning('请先登录'); }
   };
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '200px auto' }} />;
@@ -69,6 +52,9 @@ export default function StyleDetailPage() {
             <Button type="primary" size="large" onClick={() => setAptOpen(true)} style={{ marginRight: 12 }}>
               立即预约
             </Button>
+            <Link to={`/tryon?merchant_id=${merchantId}&style_id=${style.id}`} style={{ marginRight: 12 }}>
+              <Button size="large" style={{ borderColor: '#c77986', color: '#c77986' }}>AI试戴</Button>
+            </Link>
             <Button size="large" onClick={onFavorite}>收藏款式</Button>
           </div>
 
@@ -86,14 +72,13 @@ export default function StyleDetailPage() {
         </Col>
       </Row>
 
-      <Modal title="预约确认" open={aptOpen} onOk={onAppointment} onCancel={() => setAptOpen(false)}
-        okText="确认预约" confirmLoading={aptLoading}>
-        <p><strong>款式：</strong>{style.name}</p>
-        <p><strong>价格：</strong>¥{style.price}</p>
-        {style.merchant && <p><strong>店铺：</strong>{style.merchant.name}</p>}
-        <Input placeholder="期望时间（如：明天下午2点）" value={aptTime} onChange={e => setAptTime(e.target.value)} style={{ marginBottom: 12 }} />
-        <Input.TextArea placeholder="需求备注（选填）" value={aptNotes} onChange={e => setAptNotes(e.target.value)} rows={2} />
-      </Modal>
+      <AppointmentModal
+        open={aptOpen}
+        onClose={() => setAptOpen(false)}
+        merchantId={merchantId}
+        styleId={style.id}
+        styleName={style.name}
+      />
     </div>
   );
 }
