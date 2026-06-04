@@ -47,11 +47,11 @@ export default function MerchantDetailPage() {
         </div>
       )}
 
-      <Title level={2} style={{ color: '#8b5e6b' }}>{merchant.name}</Title>
+      <Title level={2} style={{ color: '#2f4541' }}>{merchant.name}</Title>
       <div style={{ marginBottom: 12 }}>
         <Tag>{merchant.city}{merchant.district ? ` · ${merchant.district}` : ''}</Tag>
         <Tag>⭐ {merchant.rating}</Tag>
-        {(merchant.tags || []).map((t: string) => <Tag key={t} color="#c77986">{t}</Tag>)}
+        {(merchant.tags || []).map((t: string) => <Tag key={t} color="#2f6f68">{t}</Tag>)}
       </div>
       <Paragraph style={{ color: '#555', fontSize: 14 }}>{merchant.description}</Paragraph>
       <div style={{ color: '#888', fontSize: 13, marginBottom: 4 }}>📍 {merchant.address}</div>
@@ -59,7 +59,7 @@ export default function MerchantDetailPage() {
 
       <Row gutter={24} style={{ marginTop: 24 }}>
         <Col xs={24} md={16}>
-          <Title level={4} style={{ color: '#8b5e6b' }}>服务项目</Title>
+          <Title level={4} style={{ color: '#2f4541' }}>服务项目</Title>
           {(merchant.styles || []).map((s: any) => (
             <Card key={s.id} size="small" style={{ marginBottom: 8 }}>
               <Row align="middle">
@@ -67,14 +67,14 @@ export default function MerchantDetailPage() {
                 <Col flex={1} style={{ marginLeft: 16 }}>
                   <Link to={`/styles/${s.id}`}><strong>{s.name}</strong></Link>
                   <div style={{ color: '#888', fontSize: 13 }}>{s.description}</div>
-                  <strong style={{ color: '#c77986' }}>¥{s.price}</strong>
+                  <strong style={{ color: '#2f6f68' }}>¥{s.price}</strong>
                 </Col>
               </Row>
             </Card>
           ))}
         </Col>
         <Col xs={24} md={8}>
-          <Card title="预约/咨询" style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}>
+          <Card title="预约/咨询" style={{ borderRadius: 12, border: '1px solid #d8e8df' }}>
             <Button type="primary" block onClick={() => setAptOpen(true)} size="large" style={{ marginBottom: 12, borderRadius: 8 }}>
               立即预约
             </Button>
@@ -94,3 +94,4 @@ export default function MerchantDetailPage() {
     </div>
   );
 }
+

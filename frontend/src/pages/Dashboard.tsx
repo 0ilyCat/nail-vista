@@ -322,11 +322,11 @@ export default function DashboardPage() {
   /* ═══════════════════════════ 渲染 ═══════════════════════════ */
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <h2 style={{ color: '#8b5e6b', marginBottom: 20 }}>🏪 商家后台</h2>
+      <h2 style={{ color: '#2f4541', marginBottom: 20 }}>🏪 商家后台</h2>
 
       <Tabs
         size="large"
-        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #f0d6dc', marginBottom: 16 }}
+        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #d8e8df', marginBottom: 16 }}
         items={[
           /* ════ Tab: 数据概览 ════ */
           {
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                       <Button key={String(f.key)}
                         type={isActive ? 'primary' : 'default'}
                         onClick={() => loadAppts(f.key)}
-                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#f0d6dc' }}
+                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#d8e8df' }}
                       >
                         {f.label}
                       </Button>
@@ -458,7 +458,7 @@ export default function DashboardPage() {
                       },
                       {
                         title: '每时段最大预约数', dataIndex: 'max_bookings', width: 160, align: 'center' as const,
-                        render: (v: number) => <strong style={{ color: '#c77986' }}>{v || '-'}</strong>,
+                        render: (v: number) => <strong style={{ color: '#2f6f68' }}>{v || '-'}</strong>,
                       },
                       {
                         title: '操作', width: 120,
@@ -604,3 +604,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

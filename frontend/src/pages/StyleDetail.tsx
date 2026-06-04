@@ -39,13 +39,13 @@ export default function StyleDetailPage() {
             style={{ width: '100%', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
         </Col>
         <Col xs={24} md={12}>
-          <Title level={2} style={{ color: '#8b5e6b' }}>{style.name}</Title>
+          <Title level={2} style={{ color: '#2f4541' }}>{style.name}</Title>
           <div style={{ marginBottom: 12 }}>
             {[style.category, style.color_tone, style.scene, style.nail_shape].filter(Boolean).map((t: string) => (
-              <Tag key={t} color="#c77986" style={{ marginRight: 6 }}>{t}</Tag>
+              <Tag key={t} color="#2f6f68" style={{ marginRight: 6 }}>{t}</Tag>
             ))}
           </div>
-          <div style={{ fontSize: 28, color: '#c77986', fontWeight: 700, marginBottom: 12 }}>¥{style.price}</div>
+          <div style={{ fontSize: 28, color: '#2f6f68', fontWeight: 700, marginBottom: 12 }}>¥{style.price}</div>
           <Paragraph>{style.description}</Paragraph>
 
           <div style={{ marginTop: 24 }}>
@@ -53,7 +53,7 @@ export default function StyleDetailPage() {
               立即预约
             </Button>
             <Link to={`/tryon?merchant_id=${merchantId}&style_id=${style.id}`} style={{ marginRight: 12 }}>
-              <Button size="large" style={{ borderColor: '#c77986', color: '#c77986' }}>AI试戴</Button>
+              <Button size="large" style={{ borderColor: '#2f6f68', color: '#2f6f68' }}>AI试戴</Button>
             </Link>
             <Button size="large" onClick={onFavorite}>收藏款式</Button>
           </div>
@@ -82,3 +82,4 @@ export default function StyleDetailPage() {
     </div>
   );
 }
+

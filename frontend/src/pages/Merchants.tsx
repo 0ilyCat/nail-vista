@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Row, Col, Card, Typography, Select, Spin, Button, message, Image } from 'antd';
+import { Row, Col, Card, Typography, Select, Spin, Button, message, Tag, Space } from 'antd';
 import { Link } from 'react-router-dom';
-import { StarOutlined } from '@ant-design/icons';
+import { EnvironmentOutlined, RightOutlined, ShopOutlined, StarFilled } from '@ant-design/icons';
 import { merchantsAPI } from '../services/api';
 import { imgUrl } from '../services/image';
 
-const { Title } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 export default function MerchantsPage() {
   const [merchants, setMerchants] = useState<any[]>([]);
@@ -26,18 +26,31 @@ export default function MerchantsPage() {
     } catch {
       setMerchants([]);
       message.error('店家加载失败');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#8b5e6b' }}>店家专区</Title>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-        <Select allowClear placeholder="城市" style={{ width: 120 }} value={cityFilter || undefined}
-          onChange={v => setCityFilter(v || '')} options={cities.map((c: any) => ({ label: c.city, value: c.city }))} />
+    <div className="nv-page">
+      <div className="nv-page-heading">
+        <div>
+          <div className="nv-kicker"><ShopOutlined /> 店家专区</div>
+          <Title level={2} style={{ margin: '14px 0 6px' }}>精选美甲店</Title>
+          <Text className="nv-muted">挑选店铺、浏览款式、预约可用时段。</Text>
+        </div>
+        <Select
+          allowClear
+          placeholder="城市"
+          style={{ width: 150 }}
+          value={cityFilter || undefined}
+          onChange={v => setCityFilter(v || '')}
+          options={cities.map((c: any) => ({ label: c.city, value: c.city }))}
+        />
       </div>
+
       {loading ? <Spin size="large" style={{ display: 'block', margin: '100px auto' }} /> : (
-        <Row gutter={[16, 16]}>
+        <Row gutter={[18, 18]}>
           {merchants.map(m => {
             const coverImg = (m.images || [])[0];
             return (
@@ -45,38 +58,37 @@ export default function MerchantsPage() {
                 <Card
                   hoverable
                   cover={
-                    <div style={{ height: 180, overflow: 'hidden', background: '#fdf2f4' }}>
+                    <div className="nv-image-tile" style={{ aspectRatio: '1 / .74' }}>
                       {coverImg ? (
-                        <img
-                          src={imgUrl(coverImg)}
-                          alt={m.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        <img src={imgUrl(coverImg)} alt={m.name} />
                       ) : (
-                        <div style={{
-                          width: '100%', height: '100%', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          fontSize: 48, color: '#d4a0a8',
-                        }}>💅</div>
+                        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#2f6f68', fontSize: 38 }}>
+                          <ShopOutlined />
+                        </div>
                       )}
                     </div>
                   }
-                  styles={{ body: { padding: '12px 16px' } }}
                 >
                   <Link to={`/merchants/${m.id}`}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: '#333', marginBottom: 4 }}>{m.name}</div>
+                    <div style={{ fontWeight: 780, fontSize: 16, color: '#2f2528', marginBottom: 6 }}>{m.name}</div>
                   </Link>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-                    {m.city}{m.district ? ` · ${m.district}` : ''}
+                  <Space size={6} className="nv-muted" style={{ fontSize: 13, marginBottom: 8 }}>
+                    <EnvironmentOutlined />
+                    <span>{m.city}{m.district ? ` · ${m.district}` : ''}</span>
+                  </Space>
+                  <Paragraph ellipsis={{ rows: 2 }} className="nv-muted" style={{ minHeight: 44, marginBottom: 10 }}>
+                    {m.description || '环境舒适，款式丰富，支持线上预约。'}
+                  </Paragraph>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <Tag color="rgba(47,111,104,0.12)" style={{ color: '#17413d', border: 'none', margin: 0 }}>
+                      <StarFilled /> {m.rating} · {m.review_count || 0} 评价
+                    </Tag>
+                    <Link to={`/merchants/${m.id}`}>
+                      <Button type="primary" size="small">
+                        详情 <RightOutlined />
+                      </Button>
+                    </Link>
                   </div>
-                  <div style={{ fontSize: 13, color: '#c77986', marginBottom: 8 }}>
-                    <StarOutlined /> {m.rating} · {m.review_count || 0} 条评价
-                  </div>
-                  <Link to={`/merchants/${m.id}`}>
-                    <Button type="primary" size="small" block style={{ borderRadius: 8 }}>
-                      查看详情
-                    </Button>
-                  </Link>
                 </Card>
               </Col>
             );
@@ -86,3 +98,4 @@ export default function MerchantsPage() {
     </div>
   );
 }
+

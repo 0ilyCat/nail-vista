@@ -53,12 +53,12 @@ export default function ChatPage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#8b5e6b' }}>💬 小美对话</Title>
+      <Title level={2} style={{ color: '#2f4541' }}>💬 小美对话</Title>
       <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 200px)' }}>
         {/* Sessions sidebar */}
         <Card size="small" style={{ width: 200 }} title="历史对话" extra={<Button size="small" type="primary" onClick={newChat}>新对话</Button>}>
           <List size="small" dataSource={sessions} renderItem={(s: any) => (
-            <List.Item style={{ cursor: 'pointer', background: s.session_key === activeKey ? '#fdf2f4' : 'transparent' }}
+            <List.Item style={{ cursor: 'pointer', background: s.session_key === activeKey ? '#f3f8f4' : 'transparent' }}
               onClick={() => setActiveKey(s.session_key)}>
               <Text ellipsis>{s.title}</Text>
             </List.Item>
@@ -71,9 +71,9 @@ export default function ChatPage() {
             {messages.map((m, i) => (
               <div key={i} style={{ marginBottom: 16, display: 'flex', gap: 8, flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
                 <Avatar icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                  style={{ backgroundColor: m.role === 'user' ? '#c77986' : '#8b5e6b' }} />
+                  style={{ backgroundColor: m.role === 'user' ? '#2f6f68' : '#2f4541' }} />
                 <div style={{
-                  background: m.role === 'user' ? '#c77986' : '#f5f5f5',
+                  background: m.role === 'user' ? '#2f6f68' : '#f5f5f5',
                   color: m.role === 'user' ? '#fff' : '#333',
                   padding: '8px 16px', borderRadius: 12, maxWidth: '70%', whiteSpace: 'pre-wrap',
                 }}>
@@ -84,7 +84,7 @@ export default function ChatPage() {
             ))}
             {loading && <Spin size="small" style={{ marginLeft: 48 }} />}
           </div>
-          <div style={{ padding: '12px 16px', borderTop: '1px solid #f0d6dc', display: 'flex', gap: 8 }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #d8e8df', display: 'flex', gap: 8 }}>
             <Input.TextArea value={input} onChange={e => setInput(e.target.value)} onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); onSend(); } }}
               placeholder="告诉我你想要的美甲风格..." rows={2} autoSize />
             <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading}>发送</Button>
@@ -94,3 +94,4 @@ export default function ChatPage() {
     </div>
   );
 }
+

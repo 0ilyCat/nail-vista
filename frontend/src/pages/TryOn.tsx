@@ -252,7 +252,7 @@ export default function TryOnPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#8b5e6b' }}>AI美甲试戴</Title>
+      <Title level={2} style={{ color: '#2f4541' }}>AI美甲试戴</Title>
 
       <Row gutter={24}>
         {/* ──── 左侧：商家 + 手图 ──── */}
@@ -260,7 +260,7 @@ export default function TryOnPage() {
           {/* 商家选择 */}
           <Card
             title={<span><ShopOutlined style={{ marginRight: 6 }} />选择商家</span>}
-            style={{ borderRadius: 12, border: '1px solid #f0d6dc', marginBottom: 16 }}
+            style={{ borderRadius: 12, border: '1px solid #d8e8df', marginBottom: 16 }}
           >
             <Select
               showSearch
@@ -278,7 +278,7 @@ export default function TryOnPage() {
           {/* 手图选择 */}
           <Card
             title="选择手图"
-            style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}
+            style={{ borderRadius: 12, border: '1px solid #d8e8df' }}
           >
             <Upload
               beforeUpload={file => { onUploadHand(file); return false; }}
@@ -305,7 +305,7 @@ export default function TryOnPage() {
                     onClick={() => setSelectedHand(h.id)}
                     title={h.is_preset ? '预设手图' : '我的手图'}
                     style={{
-                      border: selectedHand === h.id ? '3px solid #c77986' : '3px solid transparent',
+                      border: selectedHand === h.id ? '3px solid #2f6f68' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, height: 100, position: 'relative',
                       transition: 'border-color .15s',
@@ -333,7 +333,7 @@ export default function TryOnPage() {
                     {selectedHand === h.id && (
                       <div style={{
                         position: 'absolute', top: 2, right: 2, zIndex: 2,
-                        background: '#c77986', color: '#fff',
+                        background: '#2f6f68', color: '#fff',
                         borderRadius: '50%', width: 20, height: 20,
                         fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>✓</div>
@@ -349,7 +349,7 @@ export default function TryOnPage() {
         <Col xs={24} md={8}>
           <Card
             title="选择美甲款式"
-            style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}
+            style={{ borderRadius: 12, border: '1px solid #d8e8df' }}
           >
             {!selectedMerchant ? (
               <div style={{ padding: 30, textAlign: 'center', color: '#bbb', fontSize: 13 }}>
@@ -368,7 +368,7 @@ export default function TryOnPage() {
                     key={s.id}
                     onClick={() => setSelectedStyle(s.id)}
                     style={{
-                      border: selectedStyle === s.id ? '3px solid #c77986' : '3px solid transparent',
+                      border: selectedStyle === s.id ? '3px solid #2f6f68' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, textAlign: 'center',
                       transition: 'border-color .15s',
@@ -382,7 +382,7 @@ export default function TryOnPage() {
                     <div style={{ fontSize: 11, padding: '2px 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.name}
                     </div>
-                    <div style={{ fontSize: 11, color: '#c77986', fontWeight: 600, paddingBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: '#2f6f68', fontWeight: 600, paddingBottom: 4 }}>
                       ¥{s.price}
                     </div>
                   </div>
@@ -396,7 +396,7 @@ export default function TryOnPage() {
         <Col xs={24} md={8}>
           <Card
             title="试戴效果"
-            style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}
+            style={{ borderRadius: 12, border: '1px solid #d8e8df' }}
           >
             <Button
               type="primary"
@@ -418,7 +418,7 @@ export default function TryOnPage() {
                 disabled={!selectedMerchant || !selectedHand || !selectedStyle}
                 style={{
                   marginBottom: 12, borderRadius: 8, height: 38,
-                  borderColor: '#c77986', color: '#c77986',
+                  borderColor: '#2f6f68', color: '#2f6f68',
                 }}
               >
                 重新生成
@@ -431,7 +431,7 @@ export default function TryOnPage() {
 
             {loading && (
               <div style={{ textAlign: 'center', padding: 24 }}>
-                <Spin indicator={<LoadingOutlined style={{ fontSize: 36, color: '#c77986' }} spin />} />
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 36, color: '#2f6f68' }} spin />} />
                 <div style={{ marginTop: 12, color: '#999', fontSize: 13 }}>
                   正在调用AI模型生成试戴效果，请耐心等待...
                 </div>
@@ -458,8 +458,8 @@ export default function TryOnPage() {
 
       {/* ══════════════════════ 试戴历史 ══════════════════════ */}
       <Card
-        title={<span style={{ color: '#8b5e6b', fontSize: 16 }}>试戴历史</span>}
-        style={{ borderRadius: 12, border: '1px solid #f0d6dc', marginTop: 24 }}
+        title={<span style={{ color: '#2f4541', fontSize: 16 }}>试戴历史</span>}
+        style={{ borderRadius: 12, border: '1px solid #d8e8df', marginTop: 24 }}
       >
         {historyLoading ? (
           <Spin style={{ display: 'block', padding: 32 }} />
@@ -476,13 +476,13 @@ export default function TryOnPage() {
                     <div
                       onClick={() => onHistoryClick(item)}
                       style={{
-                        borderRadius: 10, overflow: 'hidden', border: '1px solid #f0d6dc',
+                        borderRadius: 10, overflow: 'hidden', border: '1px solid #d8e8df',
                         cursor: 'pointer', transition: 'transform .15s, box-shadow .15s',
                         background: '#fff', position: 'relative',
                       }}
                       onMouseEnter={e => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(199,121,134,0.15)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(47,111,104,0.15)';
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.transform = '';
@@ -532,3 +532,4 @@ export default function TryOnPage() {
     </div>
   );
 }
+

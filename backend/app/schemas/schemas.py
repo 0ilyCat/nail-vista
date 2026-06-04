@@ -1,7 +1,7 @@
 """
 Pydantic 请求/响应 Schema 定义
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -15,9 +15,19 @@ class UserRegister(BaseModel):
     nickname: Optional[str] = ""
     role: Optional[str] = "user"  # user / merchant
 
+    @field_validator("username", "nickname", "role", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
 class UserLogin(BaseModel):
     username: str
     password: str
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def strip_username(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 class TokenResponse(BaseModel):
     access_token: str

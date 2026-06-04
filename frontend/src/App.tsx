@@ -20,11 +20,35 @@ import MerchantJoinPage from './pages/MerchantJoin';
 
 const theme = {
   token: {
-    colorPrimary: '#c77986',
-    colorPrimaryBg: '#fdf2f4',
+    colorPrimary: '#2f6f68',
+    colorPrimaryBg: '#edf6f1',
+    colorLink: '#2f6f68',
+    colorText: '#1f2b29',
+    colorTextSecondary: '#667572',
+    colorBorder: 'rgba(47, 111, 104, 0.16)',
     borderRadius: 8,
     colorBgContainer: '#ffffff',
+    boxShadowSecondary: '0 18px 50px rgba(24, 62, 57, 0.11)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif',
+  },
+  components: {
+    Button: {
+      controlHeight: 38,
+      borderRadius: 8,
+    },
+    Card: {
+      borderRadiusLG: 8,
+    },
+    Input: {
+      borderRadius: 8,
+    },
+    Select: {
+      borderRadius: 8,
+    },
+    Tabs: {
+      inkBarColor: '#2f6f68',
+      itemSelectedColor: '#2f6f68',
+    },
   },
 };
 
@@ -57,3 +81,4 @@ export default function App() {
     </ConfigProvider>
   );
 }
+

@@ -33,7 +33,7 @@ export default function AppointmentsPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#8b5e6b' }}>📋 我的预约</Title>
+      <Title level={2} style={{ color: '#2f4541' }}>📋 我的预约</Title>
       <Table rowKey="id" dataSource={appts} pagination={false}
         columns={[
           { title: 'ID', dataIndex: 'id', width: 60 },
@@ -57,3 +57,4 @@ export default function AppointmentsPage() {
     </div>
   );
 }
+

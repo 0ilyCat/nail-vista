@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Input, Button, Dropdown, Avatar, Space, Badge } from 'antd';
+import { Layout, Menu, Input, Button, Dropdown, Avatar, Space } from 'antd';
 import {
   HomeOutlined, CompassOutlined, ExperimentOutlined, MessageOutlined,
   ShopOutlined, UserOutlined, HeartOutlined, DashboardOutlined,
-  CalendarOutlined, SearchOutlined, LogoutOutlined, LoginOutlined,
+  CalendarOutlined, LogoutOutlined, LoginOutlined, HighlightOutlined,
 } from '@ant-design/icons';
 
 const { Header, Content, Footer } = Layout;
@@ -17,7 +17,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     const u = localStorage.getItem('user');
-    if (u) setUser(JSON.parse(u));
+    setUser(u ? JSON.parse(u) : null);
   }, [loc.pathname]);
 
   const onLogout = () => {
@@ -40,24 +40,39 @@ export default function AppLayout() {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#fdf2f4' }}>
-      <Header style={{ background: '#fff', display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #f0d6dc', height: 64, position: 'sticky', top: 0, zIndex: 100 }}>
-        <Link to="/" style={{ fontWeight: 700, fontSize: 20, color: '#c77986', marginRight: 32, whiteSpace: 'nowrap' }}>
-          💅 NailVista
+    <Layout className="nv-shell">
+      <Header className="nv-header">
+        <Link to="/" className="nv-brand">
+          <span className="nv-brand-mark"><HighlightOutlined /></span>
+          <span>NailVista</span>
         </Link>
-        <Menu mode="horizontal" selectedKeys={[loc.pathname]} items={menuItems} style={{ flex: 1, border: 'none' }} />
+
+        <Menu
+          mode="horizontal"
+          selectedKeys={[loc.pathname]}
+          items={menuItems}
+          style={{ flex: 1, border: 'none' }}
+        />
+
         <Space>
-          <Input.Search size="middle" placeholder="搜索美甲、帖子、商家..." value={searchVal}
-            onChange={e => setSearchVal(e.target.value)} onSearch={onSearch}
-            style={{ width: 220 }}
+          <Input.Search
+            className="nv-search"
+            size="middle"
+            placeholder="搜索美甲、帖子、商家..."
+            value={searchVal}
+            onChange={e => setSearchVal(e.target.value)}
+            onSearch={onSearch}
           />
+
           {user ? (
             <>
               <Button shape="circle" icon={<HeartOutlined />} onClick={() => nav('/favorites')} />
               {user.role === 'merchant' && (
                 <>
                   <Button shape="circle" icon={<DashboardOutlined />} onClick={() => nav('/dashboard')} />
-                  <Button size="small" onClick={() => nav('/merchant/join')} style={{ color: '#c77986', borderColor: '#c77986' }}>入驻</Button>
+                  <Button size="small" onClick={() => nav('/merchant/join')}>
+                    入驻
+                  </Button>
                 </>
               )}
               <Button shape="circle" icon={<CalendarOutlined />} onClick={() => nav('/appointments')} />
@@ -65,21 +80,27 @@ export default function AppLayout() {
                 { key: 'profile', label: '用户中心', icon: <UserOutlined />, onClick: () => nav('/profile') },
                 { key: 'logout', label: '退出登录', icon: <LogoutOutlined />, onClick: onLogout },
               ]}}>
-                <Avatar style={{ backgroundColor: '#c77986', cursor: 'pointer' }}>{user.nickname?.[0]}</Avatar>
+                <Avatar style={{ backgroundColor: '#2f6f68', cursor: 'pointer' }}>
+                  {user.nickname?.[0] || user.username?.[0] || <UserOutlined />}
+                </Avatar>
               </Dropdown>
             </>
           ) : (
-            <Button type="primary" icon={<LoginOutlined />} onClick={() => nav('/login')}>登录</Button>
+            <Button type="primary" icon={<LoginOutlined />} onClick={() => nav('/login')}>
+              登录
+            </Button>
           )}
         </Space>
       </Header>
-      <Content style={{ padding: '0 24px', minHeight: 'calc(100vh - 128px)' }}>
+
+      <Content className="nv-content">
         <Outlet />
       </Content>
-      <Footer style={{ textAlign: 'center', background: '#fff', borderTop: '1px solid #f0d6dc', color: '#999' }}>
-        NailVista ©2026 · AI美甲试戴平台
-      </Footer>
 
+      <Footer className="nv-footer">
+        NailVista 2026 | AI 美甲试戴平台
+      </Footer>
     </Layout>
   );
 }
+

@@ -4,7 +4,7 @@ NailVista 核心配置
 """
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
     DB_NAME: str = "nail_vista"
+    DATABASE_URL: Optional[str] = None
 
     # JWT
     JWT_SECRET_KEY: str = "nailvista-secret-key-change-in-production"
@@ -49,6 +50,8 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
