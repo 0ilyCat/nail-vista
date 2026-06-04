@@ -56,7 +56,8 @@ Thumbs.db
 # IDE & Runtime plugins
 .openclaw/plugin-skills/
 .vscode/
-# .openclaw/openclaw.json — 配置文件提交，不忽略
+# .openclaw/openclaw.json — 含 API Key，不提交
+.openclaw/openclaw.json
 .openclaw/agents/*/.openclaw/
 
 # 自动创建的 workspace 目录（含旧 ID 遗留，运行时自动生成）
