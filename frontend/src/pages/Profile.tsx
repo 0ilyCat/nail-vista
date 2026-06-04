@@ -219,7 +219,7 @@ export default function ProfilePage() {
     <div style={{ width: 272, flexShrink: 0 }}>
       {/* 用户卡片 */}
       <Card
-        style={{ borderRadius: 12, marginBottom: 16, textAlign: 'center', border: '1px solid #f0d6dc' }}
+        style={{ borderRadius: 12, marginBottom: 16, textAlign: 'center', border: '1px solid #e8ede6' }}
         styles={{ body: { padding: '28px 20px 20px' } }}
       >
         <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -227,7 +227,7 @@ export default function ProfilePage() {
             size={88}
             src={imgUrl(user.avatar_url)}
             icon={<UserOutlined />}
-            style={{ border: '3px solid #fdf2f4' }}
+            style={{ border: '3px solid #eef5eb' }}
           />
           <Upload beforeUpload={onAvatarUpload} showUploadList={false} accept="image/*">
             <Button
@@ -237,38 +237,38 @@ export default function ProfilePage() {
               loading={avatarUploading}
               style={{
                 position: 'absolute', bottom: -4, right: -4,
-                backgroundColor: '#c77986', color: '#fff', border: '2px solid #fff',
+                backgroundColor: '#7d9d7a', color: '#fff', border: '2px solid #fff',
               }}
             />
           </Upload>
         </div>
         <h3 style={{ margin: '14px 0 4px', fontSize: 18, color: '#333' }}>{user.nickname || user.username}</h3>
-        <Tag color="#c77986" style={{ borderRadius: 10 }}>{roleLabel}</Tag>
+        <Tag color="#7d9d7a" style={{ borderRadius: 10 }}>{roleLabel}</Tag>
         <div style={{ marginTop: 6, color: '#999', fontSize: 13 }}>
           @{user.username}
         </div>
       </Card>
 
       {/* 统计卡片 */}
-      <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #f0d6dc' }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #e8ede6' }} styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={[0, 16]}>
           <Col span={12} style={{ textAlign: 'center' }}>
-            <Statistic title="预约" value={stats.appointment_count || 0} valueStyle={{ fontSize: 22, color: '#c77986' }} prefix={<CalendarOutlined />} />
+            <Statistic title="预约" value={stats.appointment_count || 0} valueStyle={{ fontSize: 22, color: '#7d9d7a' }} prefix={<CalendarOutlined />} />
           </Col>
           <Col span={12} style={{ textAlign: 'center' }}>
-            <Statistic title="帖子" value={stats.post_count || 0} valueStyle={{ fontSize: 22, color: '#c77986' }} prefix={<EditOutlined />} />
+            <Statistic title="帖子" value={stats.post_count || 0} valueStyle={{ fontSize: 22, color: '#7d9d7a' }} prefix={<EditOutlined />} />
           </Col>
           <Col span={12} style={{ textAlign: 'center' }}>
-            <Statistic title="收藏款式" value={stats.favorite_style_count || 0} valueStyle={{ fontSize: 22, color: '#c77986' }} prefix={<HeartOutlined />} />
+            <Statistic title="收藏款式" value={stats.favorite_style_count || 0} valueStyle={{ fontSize: 22, color: '#7d9d7a' }} prefix={<HeartOutlined />} />
           </Col>
           <Col span={12} style={{ textAlign: 'center' }}>
-            <Statistic title="收藏商家" value={stats.favorite_merchant_count || 0} valueStyle={{ fontSize: 22, color: '#c77986' }} prefix={<ShopOutlined />} />
+            <Statistic title="收藏商家" value={stats.favorite_merchant_count || 0} valueStyle={{ fontSize: 22, color: '#7d9d7a' }} prefix={<ShopOutlined />} />
           </Col>
         </Row>
       </Card>
 
       {/* 快捷入口 */}
-      <Card style={{ borderRadius: 12, border: '1px solid #f0d6dc' }} styles={{ body: { padding: 0 } }}>
+      <Card style={{ borderRadius: 12, border: '1px solid #e8ede6' }} styles={{ body: { padding: 0 } }}>
         {[
           { icon: <CalendarOutlined />, label: '我的预约', onClick: () => nav('/appointments') },
           { icon: <HeartOutlined />, label: '我的收藏', onClick: () => nav('/favorites') },
@@ -279,13 +279,13 @@ export default function ProfilePage() {
             onClick={item.onClick}
             style={{
               padding: '12px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
-              borderBottom: i < 2 ? '1px solid #fdf2f4' : 'none',
+              borderBottom: i < 2 ? '1px solid #eef5eb' : 'none',
               color: '#555', fontSize: 14, transition: 'background .2s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#fdf2f4')}
+            onMouseEnter={e => (e.currentTarget.style.background = '#eef5eb')}
             onMouseLeave={e => (e.currentTarget.style.background = '')}
           >
-            <span style={{ color: '#c77986', fontSize: 16 }}>{item.icon}</span>
+            <span style={{ color: '#7d9d7a', fontSize: 16 }}>{item.icon}</span>
             {item.label}
           </div>
         ))}
@@ -295,7 +295,7 @@ export default function ProfilePage() {
 
   /* ──────── Tab: 个人信息 ──────── */
   const tabProfile = (
-    <Card title="编辑个人信息" style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}>
+    <Card title="编辑个人信息" style={{ borderRadius: 12, border: '1px solid #e8ede6' }}>
       <Form
         layout="vertical"
         initialValues={{
@@ -350,7 +350,7 @@ export default function ProfilePage() {
             <List.Item
               extra={
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#c77986' }}>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: '#7d9d7a' }}>
                     ¥{a.price?.toFixed(0) || 0}
                   </div>
                   {a.status === 'pending' && (
@@ -389,7 +389,7 @@ export default function ProfilePage() {
             </List.Item>
           );
         }}
-        style={{ background: '#fff', borderRadius: 12, padding: '8px 20px', border: '1px solid #f0d6dc' }}
+        style={{ background: '#fff', borderRadius: 12, padding: '8px 20px', border: '1px solid #e8ede6' }}
       />
     )
   );
@@ -405,8 +405,8 @@ export default function ProfilePage() {
     ) : (
       <div>
         {favStyles.length > 0 && (
-          <Card title="收藏的款式" size="small" style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #f0d6dc' }}
-            extra={<a onClick={() => nav('/favorites')} style={{ color: '#c77986' }}>查看全部</a>}>
+          <Card title="收藏的款式" size="small" style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #e8ede6' }}
+            extra={<a onClick={() => nav('/favorites')} style={{ color: '#7d9d7a' }}>查看全部</a>}>
             <Row gutter={[12, 12]}>
               {favStyles.slice(0, 6).map((s: any) => (
                 <Col key={s.id} xs={12} sm={8} md={6}>
@@ -414,12 +414,12 @@ export default function ProfilePage() {
                     onClick={() => nav(`/styles/${s.id}`)}
                     style={{
                       borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                      border: '1px solid #f0d6dc', transition: 'transform .2s',
+                      border: '1px solid #e8ede6', transition: 'transform .2s',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
                     onMouseLeave={e => (e.currentTarget.style.transform = '')}
                   >
-                    <div style={{ height: 120, background: '#fdf2f4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ height: 120, background: '#eef5eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <img src={imgUrl(s.image_url)} alt={s.name}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                       <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {s.name}
                       </div>
-                      <div style={{ fontSize: 13, color: '#c77986', fontWeight: 600 }}>
+                      <div style={{ fontSize: 13, color: '#7d9d7a', fontWeight: 600 }}>
                         ¥{s.price?.toFixed(0) || 0}
                       </div>
                     </div>
@@ -439,8 +439,8 @@ export default function ProfilePage() {
           </Card>
         )}
         {favMerchants.length > 0 && (
-          <Card title="收藏的商家" size="small" style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}
-            extra={<a onClick={() => nav('/favorites')} style={{ color: '#c77986' }}>查看全部</a>}>
+          <Card title="收藏的商家" size="small" style={{ borderRadius: 12, border: '1px solid #e8ede6' }}
+            extra={<a onClick={() => nav('/favorites')} style={{ color: '#7d9d7a' }}>查看全部</a>}>
             <Row gutter={[12, 12]}>
               {favMerchants.slice(0, 6).map((m: any) => (
                 <Col key={m.id} xs={12} sm={8} md={6}>
@@ -448,7 +448,7 @@ export default function ProfilePage() {
                     onClick={() => nav(`/merchants/${m.id}`)}
                     style={{
                       borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                      border: '1px solid #f0d6dc', textAlign: 'center', padding: '16px 10px',
+                      border: '1px solid #e8ede6', textAlign: 'center', padding: '16px 10px',
                       transition: 'transform .2s',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
@@ -494,7 +494,7 @@ export default function ProfilePage() {
                     style={{ borderRadius: 8 }} />
                 ) : (
                   <Avatar shape="square" size={56} icon={<PictureOutlined />}
-                    style={{ borderRadius: 8, backgroundColor: '#fdf2f4' }} />
+                    style={{ borderRadius: 8, backgroundColor: '#eef5eb' }} />
                 )
               }
               title={<span style={{ fontWeight: 600 }}>{p.title}</span>}
@@ -509,14 +509,14 @@ export default function ProfilePage() {
             />
           </List.Item>
         )}
-        style={{ background: '#fff', borderRadius: 12, padding: '8px 20px', border: '1px solid #f0d6dc' }}
+        style={{ background: '#fff', borderRadius: 12, padding: '8px 20px', border: '1px solid #e8ede6' }}
       />
     )
   );
 
   /* ──────── Tab: 账号安全 ──────── */
   const tabSecurity = (
-    <Card title="账号安全" style={{ borderRadius: 12, border: '1px solid #f0d6dc' }}>
+    <Card title="账号安全" style={{ borderRadius: 12, border: '1px solid #e8ede6' }}>
       <Descriptions column={1} size="middle" styles={{ label: { fontWeight: 500, color: '#555', width: 100 } }}>
         <Descriptions.Item label="用户名">{user.username}</Descriptions.Item>
         <Descriptions.Item label="角色">{roleLabel}</Descriptions.Item>
@@ -524,13 +524,13 @@ export default function ProfilePage() {
           {user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '-'}
         </Descriptions.Item>
         <Descriptions.Item label="登录密码">
-          <Button icon={<LockOutlined />} onClick={() => setPwdModalOpen(true)} style={{ color: '#c77986', borderColor: '#c77986' }}>
+          <Button icon={<LockOutlined />} onClick={() => setPwdModalOpen(true)} style={{ color: '#7d9d7a', borderColor: '#7d9d7a' }}>
             修改密码
           </Button>
         </Descriptions.Item>
       </Descriptions>
 
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #f0d6dc' }}>
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #e8ede6' }}>
         <Button
           danger
           icon={<LogoutOutlined />}
@@ -566,7 +566,7 @@ export default function ProfilePage() {
         <Tabs
           items={tabItems}
           size="large"
-          tabBarStyle={{ marginBottom: 16, background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #f0d6dc' }}
+          tabBarStyle={{ marginBottom: 16, background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #e8ede6' }}
           onChange={(key) => {
             if (key === 'appointments') loadAppointments();
             if (key === 'favorites') loadFavorites();

@@ -28,7 +28,7 @@ export default function HomePage() {
     <div>
       {/* Hero */}
       <div style={{ textAlign: 'center', padding: '60px 0 40px' }}>
-        <Title level={1} style={{ color: '#c77986', fontSize: 36 }}>
+        <Title level={1} style={{ color: '#7d9d7a', fontSize: 36 }}>
           AI 美甲灵感引擎：从想法到指尖，一步到位
         </Title>
         <Paragraph type="secondary" style={{ fontSize: 16 }}>
@@ -41,14 +41,14 @@ export default function HomePage() {
         <div style={{ marginTop: 24 }}>
           <span style={{ color: '#999' }}>热门风格：</span>
           {['猫眼','通勤','裸色','极简','手绘','彩绘'].map(t => (
-            <Link key={t} to={`/community?search=${t}`}><Tag color="#c77986" style={{ marginLeft: 8 }}>{t}</Tag></Link>
+            <Link key={t} to={`/community?search=${t}`}><Tag color="#7d9d7a" style={{ marginLeft: 8 }}>{t}</Tag></Link>
           ))}
         </div>
       </div>
 
       {/* Hot Styles */}
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <Title level={2} style={{ color: '#8b5e6b' }}>🔥 今日热门灵感</Title>
+        <Title level={2} style={{ color: '#5a7a52' }}>🔥 今日热门灵感</Title>
         <Row gutter={[16, 16]}>
           {hotStyles.map(s => (
             <Col xs={12} sm={8} md={6} lg={4} key={s.id}>
@@ -60,7 +60,7 @@ export default function HomePage() {
                 }>
                   <Card.Meta
                     title={<span style={{ fontSize: 13 }}>{s.name}</span>}
-                    description={<span style={{ color: '#c77986', fontWeight: 600 }}>¥{s.price}</span>}
+                    description={<span style={{ color: '#7d9d7a', fontWeight: 600 }}>¥{s.price}</span>}
                   />
                 </Card>
               </Link>
@@ -71,14 +71,14 @@ export default function HomePage() {
 
       {/* Nearby Merchants */}
       <div style={{ maxWidth: 1200, margin: '40px auto' }}>
-        <Title level={2} style={{ color: '#8b5e6b' }}>🏪 推荐店家</Title>
+        <Title level={2} style={{ color: '#5a7a52' }}>🏪 推荐店家</Title>
         <Row gutter={[16, 16]}>
           {merchants.map(m => (
             <Col xs={24} sm={12} md={8} key={m.id}>
               <Card hoverable>
                 <Row align="middle" gutter={16}>
                   <Col>
-                    <div style={{ width: 80, height: 80, borderRadius: 8, background: '#fdf2f4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: 8, background: '#eef5eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
                       🏪
                     </div>
                   </Col>

@@ -1,0 +1,103 @@
+/* ── NailVista Global Styles ── */
+
+/* Smooth transitions for interactive elements */
+.ant-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-btn:hover:not(.ant-btn-primary):not(.ant-btn-dangerous):not(:disabled) {
+  background: #f0f0f0 !important;
+  border-color: #d9d9d9 !important;
+}
+
+/* Card hover lift */
+.ant-card-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Input focus glow */
+.ant-input:focus,
+.ant-input-focused {
+  box-shadow: 0 0 0 2px rgba(125, 157, 122, 0.1) !important;
+}
+
+/* Smoother scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Table hover row */
+.ant-table-tbody > tr:hover > td {
+  background: #f8faf7 !important;
+}
+
+/* Menu item hover */
+.ant-menu-horizontal > .ant-menu-item:hover::after,
+.ant-menu-horizontal > .ant-menu-submenu:hover::after {
+  border-bottom-color: #7d9d7a !important;
+}
+
+/* Tag refinements */
+.ant-tag {
+  border-radius: 4px;
+}
+
+/* Modal refinements */
+.ant-modal-content {
+  border-radius: 16px !important;
+}
+
+/* Avatar hover scale */
+.ant-avatar {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.avatar-hover:hover {
+  transform: scale(1.08) !important;
+}
+
+/* Dropdown menu items */
+.ant-dropdown-menu-item:hover {
+  background: #f5f7f4 !important;
+}
+
+/* Select dropdown */
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: #eef5eb !important;
+}
+
+/* Upload drag area */
+.ant-upload-drag {
+  border-radius: 12px !important;
+}
+
+/* TimePicker panel */
+.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: #eef5eb !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  background: #7d9d7a !important;
+}
+
+/* Message/notification */
+.ant-message-notice-content {
+  border-radius: 10px !important;
+}

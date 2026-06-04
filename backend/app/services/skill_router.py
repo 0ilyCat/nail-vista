@@ -728,3 +728,87 @@ def format_skill_context(skill_result: dict, skill_name: str) -> str:
         return "\n".join(lines)
 
     return f"查询成功。数据: {json.dumps(data, ensure_ascii=False)}"
+
+
+# ═══════════════════════════════════════════════════
+# 动态工具执行器（React范式 — 按函数名直接映射）
+# ═══════════════════════════════════════════════════
+
+async def execute_skill_dynamic(fn_name: str, args: dict, db: AsyncSession) -> dict:
+    """根据函数名执行对应工具，返回结构化结果"""
+    try:
+        if fn_name == "search_nail_styles":
+            keyword = args.get("keyword", "")
+            category = args.get("category", "")
+            sort = args.get("sort", "popular")
+            limit = args.get("limit", 8)
+            data = await _get_styles(db, search=keyword, category=category, sort=sort, size=limit)
+            return {"success": True, "data": data}
+
+        elif fn_name == "recommend_nail_styles":
+            occasion = args.get("occasion", "")
+            style = args.get("style", "")
+            skin_tone = args.get("skin_tone", "")
+            limit = args.get("limit", 6)
+            # 偏好映射到搜索
+            search = ""
+            if occasion in ("约会",): search = "粉色" if not style else style
+            elif occasion in ("通勤", "日常"): search = "裸色" if not style else style
+            elif occasion in ("派对",): search = "闪粉" if not style else style
+            data = await _get_styles(db, search=search if search else style, sort="popular", size=limit)
+            data["preference"] = {"occasion": occasion, "skin_tone": skin_tone, "style": style}
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_nail_categories":
+            data = await _get_categories(db)
+            return {"success": True, "data": data}
+
+        elif fn_name == "evaluate_tryon_image":
+            return {"success": True, "data": {"message": "请将试戴图片发送给我，我将从颜色搭配、款式设计、整体美感、细节处理四个维度进行评价。"}}
+
+        elif fn_name == "get_ops_overview":
+            data = await _get_overview(db)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_revenue_data":
+            days = args.get("days", 7)
+            data = await _get_revenue(db, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_hot_styles":
+            limit = args.get("limit", 10)
+            days = args.get("days", 7)
+            data = await _get_hot_styles(db, limit=limit, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_trend_data":
+            days = args.get("days", 7)
+            data = await _get_trends(db, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_refund_analysis":
+            days = args.get("days", 7)
+            data = await _get_refunds(db, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_review_analysis":
+            days = args.get("days", 7)
+            data = await _get_reviews(db, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_traffic_analysis":
+            days = args.get("days", 7)
+            data = await _get_traffic(db, days=days)
+            return {"success": True, "data": data}
+
+        elif fn_name == "get_customer_analysis":
+            days = args.get("days", 7)
+            data = await _get_customers(db, days=days)
+            return {"success": True, "data": data}
+
+        else:
+            return {"success": False, "error": f"未知工具: {fn_name}"}
+
+    except Exception as e:
+        logger.error(f"[SKILL] execute_skill_dynamic failed: {fn_name} | {type(e).__name__}: {e}")
+        return {"success": False, "error": str(e)}

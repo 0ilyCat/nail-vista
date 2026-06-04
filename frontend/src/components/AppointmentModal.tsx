@@ -180,7 +180,7 @@ export default function AppointmentModal({ open, onClose, merchantId, styleId, s
     label: (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{s.name}</span>
-        <span style={{ color: '#c77986', fontWeight: 600, fontSize: 13 }}>¥{s.price}</span>
+        <span style={{ color: '#7d9d7a', fontWeight: 600, fontSize: 13 }}>¥{s.price}</span>
       </div>
     ),
     value: s.id,
@@ -201,8 +201,8 @@ export default function AppointmentModal({ open, onClose, merchantId, styleId, s
     >
       {/* 款式信息（外部传入时预填提示） */}
       {styleName && !selectedStyleId && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', background: '#fdf2f4', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Tag color="#c77986" style={{ margin: 0 }}>推荐款式</Tag>
+        <div style={{ marginBottom: 16, padding: '10px 14px', background: '#eef5eb', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Tag color="#7d9d7a" style={{ margin: 0 }}>推荐款式</Tag>
           <span style={{ fontWeight: 600, color: '#333' }}>{styleName}</span>
         </div>
       )}
@@ -262,8 +262,8 @@ export default function AppointmentModal({ open, onClose, merchantId, styleId, s
                 style={{
                   padding: '8px 14px',
                   borderRadius: 20,
-                  border: selectedSlot === slot.start ? '2px solid #c77986' : '1px solid #e8e8e8',
-                  background: selectedSlot === slot.start ? '#fdf2f4' : '#fff',
+                  border: selectedSlot === slot.start ? '2px solid #7d9d7a' : '1px solid #e8e8e8',
+                  background: selectedSlot === slot.start ? '#eef5eb' : '#fff',
                   cursor: slot.available > 0 ? 'pointer' : 'not-allowed',
                   opacity: slot.available > 0 ? 1 : 0.45,
                   fontSize: 13,

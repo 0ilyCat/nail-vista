@@ -39,12 +39,12 @@ export default function PostDetailPage() {
       <Card style={{ marginTop: 12 }}>
         <img src={imgUrl(post.image_url)} alt={post.title}
           style={{ width: '100%', maxHeight: 400, objectFit: 'cover', borderRadius: 8 }} />
-        <Title level={2} style={{ marginTop: 16, color: '#8b5e6b' }}>{post.title}</Title>
+        <Title level={2} style={{ marginTop: 16, color: '#5a7a52' }}>{post.title}</Title>
         <div style={{ color: '#999', marginBottom: 16 }}>
           {post.author_name} · ♥ {post.likes_count} · {post.content}
         </div>
         <Space>
-          <Button icon={post.is_liked ? <HeartFilled style={{ color: '#c77986' }} /> : <HeartOutlined />}
+          <Button icon={post.is_liked ? <HeartFilled style={{ color: '#7d9d7a' }} /> : <HeartOutlined />}
             onClick={onLike}>{post.is_liked ? '已收藏' : '收藏'}</Button>
           {post.style && (
             <Link to={`/styles/${post.style.id}`}>

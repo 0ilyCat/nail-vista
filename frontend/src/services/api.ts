@@ -98,6 +98,13 @@ export const chatAPI = {
   deleteSession: (key: string) => api.delete(`/chat/sessions/${key}`),
 };
 
+// ============ 运营助手对话 ============
+export const opsChatAPI = {
+  send: (data: { message: string; session_key?: string }) => api.post('/chat/ops', data),
+  getSessions: () => api.get('/chat/sessions', { params: { agent_type: 'ops' } }),
+  getMessages: (key: string) => api.get(`/chat/sessions/${key}`),
+};
+
 // ============ 试戴 ============
 export const tryonAPI = {
   getHands: () => api.get('/tryon/hand-images'),

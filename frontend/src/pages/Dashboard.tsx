@@ -1,19 +1,21 @@
 /**
  * 商家仪表盘 — 数据概览 | 款式管理 | 预约管理
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Card, Row, Col, Statistic, Tabs, Table, Button, Modal, Input,
-  InputNumber, Select, message, Tag, Spin, Empty, Upload, Avatar,
+  InputNumber, Select, message, Tag, Spin, Empty, Upload, Avatar, TimePicker,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   CheckOutlined, CloseOutlined, EyeOutlined, UploadOutlined,
   CalendarOutlined, DollarOutlined, ShoppingOutlined, ClockCircleOutlined,
+  RobotOutlined, SendOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { dashboardAPI, adminAPI } from '../services/api';
+import { dashboardAPI, adminAPI, opsChatAPI } from '../services/api';
 import { imgUrl } from '../services/image';
+import dayjs from 'dayjs';
 
 /* ───────── 状态标签配置 ───────── */
 const STATUS: Record<string, { color: string; label: string }> = {
@@ -33,12 +35,21 @@ export default function DashboardPage() {
   /* ──────── 数据概览 ──────── */
   const [overview, setOverview] = useState<any>({});
 
+  /* ──────── 运营助手AI对话 ──────── */
+  const [opsInput, setOpsInput] = useState('');
+  const [opsMessages, setOpsMessages] = useState<{ role: string; content: string }[]>([]);
+  const [opsLoading, setOpsLoading] = useState(false);
+  const [opsSessionKey, setOpsSessionKey] = useState<string | null>(null);
+  const opsChatRef = useRef<HTMLDivElement>(null);
+
   /* ──────── 款式管理 ──────── */
   const [styles, setStyles] = useState<any[]>([]);
   const [stylesLoading, setStylesLoading] = useState(false);
   const [styleModalOpen, setStyleModalOpen] = useState(false);
   const [editingStyle, setEditingStyle] = useState<any>(null);
   const [styleSubmitting, setStyleSubmitting] = useState(false);
+  const [styleImageFile, setStyleImageFile] = useState<File | null>(null);
+  const [styleImagePreview, setStyleImagePreview] = useState<string>('');
   const [styleFormVals, setStyleFormVals] = useState<any>({
     name: '', description: '', price: 0, difficulty: 'medium',
     category: '', color_tone: '', scene: '', nail_shape: '',
@@ -74,6 +85,25 @@ export default function DashboardPage() {
     } catch { /* ignore */ }
   };
 
+  /* ── 运营助手聊天 ── */
+  const onOpsSend = async () => {
+    if (!opsInput.trim()) return;
+    const msg = opsInput;
+    setOpsInput('');
+    setOpsMessages(prev => [...prev, { role: 'user', content: msg }]);
+    setOpsLoading(true);
+    try {
+      const res = await opsChatAPI.send({ message: msg, session_key: opsSessionKey || undefined });
+      setOpsMessages(prev => [...prev, { role: 'assistant', content: res.data.message.content }]);
+      if (!opsSessionKey) setOpsSessionKey(res.data.session_key);
+    } catch { message.error('分析失败'); }
+    finally { setOpsLoading(false); }
+  };
+
+  useEffect(() => {
+    if (opsChatRef.current) opsChatRef.current.scrollTop = opsChatRef.current.scrollHeight;
+  }, [opsMessages]);
+
   /* ═══════════════════════════ 款式管理 ═══════════════════════════ */
   const loadStyles = async () => {
     setStylesLoading(true);
@@ -87,6 +117,8 @@ export default function DashboardPage() {
 
   const openCreateStyle = () => {
     setEditingStyle(null);
+    setStyleImageFile(null);
+    setStyleImagePreview('');
     setStyleFormVals({ name: '', description: '', price: 0, difficulty: 'medium',
       category: '', color_tone: '', scene: '', nail_shape: '' });
     setStyleModalOpen(true);
@@ -94,6 +126,8 @@ export default function DashboardPage() {
 
   const openEditStyle = (s: any) => {
     setEditingStyle(s);
+    setStyleImageFile(null);
+    setStyleImagePreview(s.image_url ? imgUrl(s.image_url) : '');
     setStyleFormVals({
       name: s.name || '', description: s.description || '', price: s.price || 0,
       category: s.category || '', color_tone: s.color_tone || '',
@@ -111,14 +145,29 @@ export default function DashboardPage() {
     setStyleSubmitting(true);
     try {
       const values = { ...styleFormVals };
-      delete values.is_active; // edit mode only
+      delete values.is_active;
+      let styleId: number | null = null;
+
       if (editingStyle) {
         await adminAPI.updateStyle(editingStyle.id, { ...values, ...(styleFormVals.is_active !== undefined ? { is_active: styleFormVals.is_active } : {}) });
+        styleId = editingStyle.id;
         message.success('款式已更新');
       } else {
-        await adminAPI.createStyle(values);
+        const res = await adminAPI.createStyle(values);
+        styleId = res.data.id;
         message.success('款式已创建');
       }
+
+      // Upload image if selected
+      if (styleImageFile && styleId) {
+        try {
+          await adminAPI.setStyleImage(styleId, styleImageFile);
+          message.success('图片已上传');
+        } catch (imgErr: any) {
+          message.warning('款式已保存，但图片上传失败，可稍后重新上传');
+        }
+      }
+
       setStyleModalOpen(false);
       loadStyles();
       loadOverview();
@@ -155,6 +204,12 @@ export default function DashboardPage() {
       return res;
     } catch (e: any) { message.error('上传失败'); }
     return false;
+  };
+
+  /* ──────── 图片预览辅助 ──────── */
+  const clearImagePreview = () => {
+    setStyleImageFile(null);
+    setStyleImagePreview('');
   };
 
   /* ═══════════════════════════ 预约管理 ═══════════════════════════ */
@@ -322,11 +377,11 @@ export default function DashboardPage() {
   /* ═══════════════════════════ 渲染 ═══════════════════════════ */
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <h2 style={{ color: '#8b5e6b', marginBottom: 20 }}>🏪 商家后台</h2>
+      <h2 style={{ color: '#5a7a52', marginBottom: 20, fontSize: 22, fontWeight: 700 }}>商家后台</h2>
 
       <Tabs
         size="large"
-        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #f0d6dc', marginBottom: 16 }}
+        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #e8ede6', marginBottom: 16 }}
         items={[
           /* ════ Tab: 数据概览 ════ */
           {
@@ -355,6 +410,71 @@ export default function DashboardPage() {
                     />
                   </Card>
                 )}
+
+                {/* 运营助手AI对话 */}
+                <Card
+                  title={<span><RobotOutlined style={{ marginRight: 6, color: '#7d9d7a' }} />运营助手 · AI分析师</span>}
+                  size="small"
+                  style={{ marginTop: 16, borderRadius: 12 }}
+                  styles={{ body: { padding: 0 } }}
+                >
+                  <div ref={opsChatRef} style={{
+                    height: 280, overflow: 'auto', padding: '12px 16px',
+                    background: '#fafafa',
+                  }}>
+                    {opsMessages.length === 0 && (
+                      <div style={{ textAlign: 'center', marginTop: 80, color: '#bbb', fontSize: 13 }}>
+                        <RobotOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                        <div>问我今天的运营数据、热门款式、营收趋势...</div>
+                        <div style={{ marginTop: 4, color: '#ccc', fontSize: 12 }}>例如："今天数据怎么样？""最近什么款式最火？"</div>
+                      </div>
+                    )}
+                    {opsMessages.map((m, i) => (
+                      <div key={i} style={{
+                        marginBottom: 12, display: 'flex', gap: 8,
+                        flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                      }}>
+                        <Avatar icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                          size={28}
+                          style={{
+                            backgroundColor: m.role === 'user' ? '#7d9d7a' : '#5a7a5a',
+                            flexShrink: 0,
+                          }} />
+                        <div style={{
+                          background: m.role === 'user' ? '#7d9d7a' : '#fff',
+                          color: m.role === 'user' ? '#fff' : '#333',
+                          padding: '8px 14px', borderRadius: 10,
+                          maxWidth: '80%', fontSize: 13, lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        }}>
+                          {m.content}
+                        </div>
+                      </div>
+                    ))}
+                    {opsLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Avatar icon={<RobotOutlined />} size={28} style={{ backgroundColor: '#5a7a5a' }} />
+                        <Spin size="small" />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{
+                    padding: '10px 14px', borderTop: '1px solid #f0f0f0',
+                    display: 'flex', gap: 8, alignItems: 'flex-end',
+                  }}>
+                    <Input.TextArea
+                      value={opsInput}
+                      onChange={e => setOpsInput(e.target.value)}
+                      onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); onOpsSend(); } }}
+                      placeholder="问运营数据..."
+                      autoSize={{ minRows: 1, maxRows: 3 }}
+                      style={{ borderRadius: 8, fontSize: 13 }}
+                    />
+                    <Button type="primary" icon={<SendOutlined />} onClick={onOpsSend}
+                      loading={opsLoading} style={{ borderRadius: 8 }}>发送</Button>
+                  </div>
+                </Card>
               </div>
             ),
           },
@@ -402,7 +522,7 @@ export default function DashboardPage() {
                       <Button key={String(f.key)}
                         type={isActive ? 'primary' : 'default'}
                         onClick={() => loadAppts(f.key)}
-                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#f0d6dc' }}
+                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#e8ede6' }}
                       >
                         {f.label}
                       </Button>
@@ -458,7 +578,7 @@ export default function DashboardPage() {
                       },
                       {
                         title: '每时段最大预约数', dataIndex: 'max_bookings', width: 160, align: 'center' as const,
-                        render: (v: number) => <strong style={{ color: '#c77986' }}>{v || '-'}</strong>,
+                        render: (v: number) => <strong style={{ color: '#7d9d7a' }}>{v || '-'}</strong>,
                       },
                       {
                         title: '操作', width: 120,
@@ -542,6 +662,37 @@ export default function DashboardPage() {
                 placeholder="如: 方圆" />
             </Col>
           </Row>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>款式图片</label>
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                if (!file.type.startsWith('image/')) {
+                  message.error('仅支持图片文件');
+                  return false;
+                }
+                setStyleImageFile(file);
+                const reader = new FileReader();
+                reader.onload = (e) => setStyleImagePreview(e.target?.result as string);
+                reader.readAsDataURL(file);
+                return false;
+              }}
+            >
+              {styleImagePreview ? (
+                <img src={styleImagePreview} alt="preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, cursor: 'pointer', border: '1px solid #e8e8e8' }} />
+              ) : (
+                <div style={{
+                  width: 120, height: 120, border: '2px dashed #ddd', borderRadius: 8,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: '#999', transition: 'border-color .2s',
+                }}>
+                  <UploadOutlined style={{ fontSize: 24, marginBottom: 4 }} />
+                  <span style={{ fontSize: 12 }}>上传图片</span>
+                </div>
+              )}
+            </Upload>
+          </div>
           {editingStyle && (
             <div>
               <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>上架状态</label>
@@ -569,20 +720,24 @@ export default function DashboardPage() {
           <Row gutter={12}>
             <Col span={12}>
               <label style={{ display: 'block', fontWeight: 500, marginBottom: 4 }}>开始时间</label>
-              <Input
-                value={slotForm.start}
-                onChange={e => setSlotForm({ ...slotForm, start: e.target.value })}
-                placeholder="09:00"
-                style={{ borderRadius: 8 }}
+              <TimePicker
+                value={slotForm.start ? dayjs(slotForm.start, 'HH:mm') : null}
+                onChange={(t) => setSlotForm({ ...slotForm, start: t ? t.format('HH:mm') : '' })}
+                format="HH:mm"
+                minuteStep={5}
+                style={{ width: '100%', borderRadius: 8 }}
+                placeholder="选择开始时间"
               />
             </Col>
             <Col span={12}>
               <label style={{ display: 'block', fontWeight: 500, marginBottom: 4 }}>结束时间</label>
-              <Input
-                value={slotForm.end}
-                onChange={e => setSlotForm({ ...slotForm, end: e.target.value })}
-                placeholder="10:00"
-                style={{ borderRadius: 8 }}
+              <TimePicker
+                value={slotForm.end ? dayjs(slotForm.end, 'HH:mm') : null}
+                onChange={(t) => setSlotForm({ ...slotForm, end: t ? t.format('HH:mm') : '' })}
+                format="HH:mm"
+                minuteStep={5}
+                style={{ width: '100%', borderRadius: 8 }}
+                placeholder="选择结束时间"
               />
             </Col>
           </Row>
