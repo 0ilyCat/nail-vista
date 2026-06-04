@@ -1,182 +1,176 @@
+"""
+美甲款式 API
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from pathlib import Path
-import logging
+from sqlalchemy.orm import selectinload
+from typing import Optional
+from math import ceil
+
 from app.core.database import get_db
-from app.core.config import get_settings
-from app.models.models import NailStyle, StyleMetrics, TryonRecord
+from app.core.config import settings
+from app.core.logger import get_logger
+from app.models.models import NailStyle, NailTag, StyleTag, Merchant
+from app.schemas.schemas import NailStyleOut, NailStyleDetail
 
 router = APIRouter()
-settings = get_settings()
-logger = logging.getLogger("nailvista.styles")
-
-STYLES_DIR = Path(settings.STATIC_DIR) / "styles"
+logger = get_logger("styles")
 
 
-def _style_local_url(style_id: int) -> str:
-    """获取款式本地图片URL"""
-    fname = f"style_{style_id:02d}.png"
-    fpath = STYLES_DIR / fname
-    if fpath.exists():
-        return f"/static/styles/{fname}"
-    return ""
+def _style_to_out(s: NailStyle, tags: list[str] = None) -> NailStyleOut:
+    return NailStyleOut(
+        id=s.id, name=s.name, description=s.description or "",
+        image_url=s.image_url, category=s.category or "", color_tone=s.color_tone or "",
+        scene=s.scene or "", nail_shape=s.nail_shape or "", difficulty=s.difficulty or "medium",
+        price=s.price or 0, original_price=s.original_price or 0,
+        popularity=s.popularity or 0, tryon_count=s.tryon_count or 0,
+        favorite_count=s.favorite_count or 0, merchant_id=s.merchant_id,
+        merchant_name=s.merchant.name if hasattr(s, "merchant") and s.merchant else "",
+        tags=tags or [], is_active=s.is_active, created_at=s.created_at,
+    )
 
 
-@router.get("")
+async def _get_style_tags(db: AsyncSession, style_id: int) -> list[str]:
+    r = await db.execute(
+        select(NailTag.name).join(StyleTag).where(StyleTag.style_id == style_id)
+    )
+    return [row[0] for row in r.all()]
+
+
+@router.get("/styles")
 async def list_styles(
-    category: str = "",
-    search: str = "",
-    sort: str = "newest",
+    category: Optional[str] = Query(None),
+    color_tone: Optional[str] = Query(None),
+    scene: Optional[str] = Query(None),
+    nail_shape: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None),
+    max_price: Optional[float] = Query(None),
+    merchant_id: Optional[int] = Query(None),
+    search: Optional[str] = Query(None),
+    sort: str = Query("newest"),
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(12, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """款式列表，支持分类/搜索/排序"""
-    stmt = select(NailStyle)
+    logger.info(f"GET /styles category={category} sort={sort} search={search} page={page}")
+    q = select(NailStyle).options(selectinload(NailStyle.merchant)).where(NailStyle.is_active == True)
+
     if category:
-        stmt = stmt.where(NailStyle.category == category)
+        q = q.where(NailStyle.category == category)
+    if color_tone:
+        q = q.where(NailStyle.color_tone == color_tone)
+    if scene:
+        q = q.where(NailStyle.scene == scene)
+    if nail_shape:
+        q = q.where(NailStyle.nail_shape == nail_shape)
+    if min_price is not None:
+        q = q.where(NailStyle.price >= min_price)
+    if max_price is not None:
+        q = q.where(NailStyle.price <= max_price)
+    if merchant_id:
+        q = q.where(NailStyle.merchant_id == merchant_id)
     if search:
-        stmt = stmt.where(NailStyle.name.contains(search))
+        q = q.where(NailStyle.name.contains(search) | NailStyle.description.contains(search))
 
-    if sort == "popular":
-        stmt = stmt.order_by(desc(NailStyle.popularity))
-    elif sort == "name":
-        stmt = stmt.order_by(NailStyle.name)
-    else:
-        stmt = stmt.order_by(desc(NailStyle.created_at))
+    sort_map = {
+        "newest": desc(NailStyle.created_at),
+        "popular": desc(NailStyle.popularity),
+        "price_asc": NailStyle.price.asc(),
+        "price_desc": NailStyle.price.desc(),
+    }
+    q = q.order_by(sort_map.get(sort, desc(NailStyle.created_at)))
 
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total = (await db.execute(count_stmt)).scalar() or 0
+    count_q = select(func.count()).select_from(q.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
 
-    offset = (page - 1) * size
-    stmt = stmt.offset(offset).limit(size)
-    result = await db.execute(stmt)
+    offset = (page - 1) * page_size
+    q = q.offset(offset).limit(page_size)
+    result = await db.execute(q)
     styles = result.scalars().all()
 
     items = []
     for s in styles:
-        # 获取今日试戴数
-        from datetime import datetime
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        metrics_stmt = select(func.coalesce(func.sum(StyleMetrics.tryons), 0)).where(
-            StyleMetrics.style_id == s.id,
-            StyleMetrics.date == today,
-        )
-        today_tryons = (await db.execute(metrics_stmt)).scalar() or 0
-
-        items.append({
-            "id": s.id,
-            "name": s.name,
-            "local_url": _style_local_url(s.id),
-            "original_url": s.original_url,
-            "enhanced_url": s.enhanced_url,
-            "category": s.category,
-            "color_tone": s.color_tone,
-            "tags": s.tags or [],
-            "description": s.description,
-            "popularity": s.popularity,
-            "today_tryons": today_tryons,
-        })
-
-    return {"items": items, "total": total, "page": page, "size": size}
-
-
-@router.get("/categories")
-async def list_categories(db: AsyncSession = Depends(get_db)):
-    """获取所有分类及数量"""
-    stmt = select(NailStyle.category, func.count(NailStyle.id)).group_by(NailStyle.category)
-    result = await db.execute(stmt)
-    rows = result.all()
-    return {"categories": [{"name": r[0], "count": r[1]} for r in rows if r[0]]}
-
-
-@router.get("/{style_id}")
-async def style_detail(style_id: int, db: AsyncSession = Depends(get_db)):
-    """款式详情，含统计"""
-    style = await db.get(NailStyle, style_id)
-    if not style:
-        raise HTTPException(404, "款式不存在")
-
-    today_tryons_stmt = select(func.sum(StyleMetrics.tryons)).where(
-        StyleMetrics.style_id == style_id,
-    )
-    total_tryons = (await db.execute(today_tryons_stmt)).scalar() or 0
-
-    # 最近试戴记录
-    recent_stmt = (
-        select(TryonRecord)
-        .where(TryonRecord.nail_style_id == style_id)
-        .order_by(desc(TryonRecord.created_at))
-        .limit(5)
-    )
-    recent_result = await db.execute(recent_stmt)
-    recent = []
-    for r in recent_result.scalars().all():
-        recent.append({
-            "result_url": r.result_url,
-            "created_at": r.created_at.isoformat() if r.created_at else "",
-        })
+        tags = await _get_style_tags(db, s.id)
+        items.append(_style_to_out(s, tags))
 
     return {
-        "id": style.id,
-        "name": style.name,
-        "original_url": style.original_url,
-        "enhanced_url": style.enhanced_url,
-        "category": style.category,
-        "color_tone": style.color_tone,
-        "tags": style.tags or [],
-        "description": style.description,
-        "popularity": style.popularity,
-        "total_tryons": total_tryons,
-        "recent_tryons": recent,
-        "created_at": style.created_at.isoformat() if style.created_at else "",
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": ceil(total / page_size) if total > 0 else 0,
     }
 
 
-@router.get("/hot/ranking")
+@router.get("/styles/categories")
+async def list_categories(db: AsyncSession = Depends(get_db)):
+    logger.info("GET /styles/categories")
+    r = await db.execute(
+        select(NailStyle.category, func.count(NailStyle.id))
+        .where(NailStyle.is_active == True)
+        .group_by(NailStyle.category)
+    )
+    return [{"category": row[0] or "未分类", "count": row[1]} for row in r.all()]
+
+
+@router.get("/styles/{style_id}", response_model=NailStyleDetail)
+async def get_style(style_id: int, db: AsyncSession = Depends(get_db)):
+    logger.info(f"GET /styles/{style_id}")
+    q = select(NailStyle).options(selectinload(NailStyle.merchant)).where(NailStyle.id == style_id)
+    result = await db.execute(q)
+    s = result.scalar_one_or_none()
+    if not s:
+        raise HTTPException(status_code=404, detail="款式不存在")
+
+    tags = await _get_style_tags(db, s.id)
+    return NailStyleDetail(
+        **_style_to_out(s, tags).model_dump(),
+        merchant={"id": s.merchant.id, "name": s.merchant.name, "logo_url": s.merchant.logo_url or "",
+                   "description": s.merchant.description or "", "images": s.merchant.images or [],
+                   "city": s.merchant.city or "", "district": s.merchant.district or "",
+                   "address": s.merchant.address or "", "business_hours": s.merchant.business_hours or "",
+                   "phone": s.merchant.phone or "", "rating": s.merchant.rating,
+                   "review_count": s.merchant.review_count or 0, "tags": s.merchant.tags or [],
+                   "created_at": s.merchant.created_at},
+    )
+
+
+@router.get("/styles/hot/ranking")
 async def hot_ranking(
-    limit: int = 10,
-    days: int = 7,
+    limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """热门排行（按最近N天热度分）"""
-    from datetime import datetime, timedelta
-    since = datetime.utcnow() - timedelta(days=days)
-    since = since.replace(hour=0, minute=0, second=0, microsecond=0)
+    logger.info(f"GET /styles/hot/ranking limit={limit}")
+    q = select(NailStyle).options(selectinload(NailStyle.merchant)).where(
+        NailStyle.is_active == True
+    ).order_by(desc(NailStyle.popularity)).limit(limit)
+    result = await db.execute(q)
+    styles = result.scalars().all()
+    items = []
+    for s in styles:
+        tags = await _get_style_tags(db, s.id)
+        items.append(_style_to_out(s, tags))
+    return items
 
-    stmt = (
-        select(
-            NailStyle.id,
-            NailStyle.name,
-            NailStyle.category,
-            NailStyle.color_tone,
-            func.coalesce(func.sum(StyleMetrics.tryons), 0).label("total_tryons"),
-            func.coalesce(func.sum(StyleMetrics.views), 0).label("total_views"),
-            func.coalesce(func.sum(StyleMetrics.favorites), 0).label("total_favs"),
-            func.coalesce(func.avg(StyleMetrics.hot_score), 0).label("avg_hot"),
-        )
-        .join(StyleMetrics, StyleMetrics.style_id == NailStyle.id)
-        .where(StyleMetrics.date >= since)
-        .group_by(NailStyle.id)
-        .order_by(desc("avg_hot"))
-        .limit(limit)
-    )
-    result = await db.execute(stmt)
-    rows = result.all()
 
-    ranking = []
-    for i, row in enumerate(rows):
-        ranking.append({
-            "rank": i + 1,
-            "style_id": row[0],
-            "name": row[1],
-            "category": row[2],
-            "color_tone": row[3],
-            "total_tryons": row[4],
-            "total_views": row[5],
-            "total_favorites": row[6],
-            "hot_score": round(float(row[7]), 1),
-        })
+@router.get("/styles/{style_id}/related")
+async def related_styles(style_id: int, limit: int = Query(4), db: AsyncSession = Depends(get_db)):
+    logger.info(f"GET /styles/{style_id}/related")
+    s_result = await db.execute(select(NailStyle).where(NailStyle.id == style_id))
+    style = s_result.scalar_one_or_none()
+    if not style:
+        raise HTTPException(status_code=404, detail="款式不存在")
 
-    return {"ranking": ranking, "period_days": days}
+    q = select(NailStyle).options(selectinload(NailStyle.merchant)).where(
+        NailStyle.merchant_id == style.merchant_id,
+        NailStyle.id != style_id,
+        NailStyle.is_active == True,
+    ).order_by(desc(NailStyle.popularity)).limit(limit)
+    result = await db.execute(q)
+    related = result.scalars().all()
+    items = []
+    for s in related:
+        tags = await _get_style_tags(db, s.id)
+        items.append(_style_to_out(s, tags))
+    return items

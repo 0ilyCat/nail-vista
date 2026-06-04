@@ -1,347 +1,227 @@
 """
-数据种子脚本 — 导入Excel数据 + 生成美团风格运营Mock数据
-包括: 款式、手图、订单、退款、评价、营收、流量、优惠券
+NailVista 数据导入脚本 — 创建初始店铺、用户、美甲款式、帖子
 """
-import asyncio
 import sys
-import os
-from pathlib import Path
-from datetime import datetime, timedelta
-import random
+sys.path.insert(0, ".")
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from dotenv import load_dotenv
-load_dotenv()
-
-import pandas as pd
-from sqlalchemy import select, func, case
-from app.core.database import async_session, init_db
+import asyncio
+from datetime import datetime, timezone
+from app.core.database import async_session_factory, init_db, engine, Base
+from app.core.security import hash_password
 from app.models.models import (
-    NailStyle, HandImage, StyleMetrics, TryonRecord,
-    Order, Refund, Review, DailyRevenue, TrafficMetrics, CouponUsage,
+    User, Merchant, NailStyle, NailTag, StyleTag,
+    Post, PostLike, HandImage,
 )
 
 
-CATEGORIES = ["纯色", "渐变", "法式", "闪粉", "手绘", "猫眼", "晕染", "大理石"]
-COLORS = ["#ffe4e1", "#6a5acd", "#ffb7c5", "#dc143c", "#deb887",
-          "#ffd700", "#98fb98", "#87ceeb", "#d2691e", "#e8b4b8",
-          "#f5deb3", "#b0c4de", "#dda0dd", "#f0e68c", "#20b2aa"]
-STYLE_NAMES = [
-    "法式简约", "星空渐变", "樱花粉", "经典红", "裸色优雅",
-    "闪钻奢华", "莫兰迪绿", "雾霾蓝", "焦糖棕", "玫瑰金",
-    "大理石纹理", "奶油白", "薰衣草紫", "蜜桃橘", "薄荷绿",
-    "深海蓝", "酒红丝绒", "豆沙粉", "香槟金", "银河流星",
-    "暗黑系", "马卡龙", "蜜糖裸", "彩虹渐变", "珍珠白",
-]
-PRICE_RANGES = [88, 98, 128, 138, 158, 168, 188, 198, 228, 258, 288, 298, 328, 358, 388]
-
-# 美甲店真实评价语料
-REVIEW_POSITIVE = [
-    "效果超好！做出来比图片还好看，同事都问在哪做的",
-    "小姐姐手法很专业，做得很细致，下次还来",
-    "颜色很显白，款式也好看，性价比很高",
-    "第一次来这家店，体验感很好，已经推荐给朋友了",
-    "还原度很高，款式图什么样做出来就是什么样",
-    "做了猫眼款，阳光下闪闪的很漂亮",
-    "环境干净，服务态度好，美甲师很耐心",
-    "第三次来了，每次都很满意，已经成为常客了",
-]
-REVIEW_NEUTRAL = [
-    "还可以吧，就是等待时间有点长",
-    "效果还行，但颜色和图片有点色差",
-    "价格适中，款式选择挺多的",
-    "中规中矩，没有特别惊喜但也不差",
-]
-REVIEW_NEGATIVE = [
-    "没图片好看，颜色不准，有点失望",
-    "做了不到一周就开始掉了，质量一般",
-    "预约了还等了半小时，效率太低了",
-    "服务态度不太好，不会再来了",
-]
-REVIEW_TAGS = ["效果好评", "服务好", "性价比高", "环境好", "技术好",
-              "款式多", "颜色好看", "显白", "还原度高", "等待快"]
-
-REFUND_REASONS = [
-    "临时有事去不了", "款式与图片不符", "预约时间冲突",
-    "找到更便宜的", "朋友不去一个人不想做", "身体不适",
-    "店铺位置不好找", "客服态度差",
+# ============================================================
+# 美甲款式数据（原项目25款）
+# ============================================================
+STYLES = [
+    {"name": "通勤奶咖短甲", "desc": "适合黄皮的显白通勤款", "category": "通勤", "color_tone": "咖色", "scene": "通勤", "nail_shape": "短甲", "price": 128},
+    {"name": "法式裸粉气质甲", "desc": "面试/见家长都不踩雷", "category": "裸色", "color_tone": "粉色", "scene": "面试", "nail_shape": "圆甲", "price": 158},
+    {"name": "偏欧美的猫眼款", "desc": "适合聚会和夜场的高调选择", "category": "猫眼", "color_tone": "黑色", "scene": "派对", "nail_shape": "长甲", "price": 198},
+    {"name": "果冻奶橘疗愈甲", "desc": "偏治愈系，适合周末放松", "category": "果冻", "color_tone": "橘色", "scene": "休闲", "nail_shape": "圆甲", "price": 148},
+    {"name": "极简法式小红点", "desc": "一点小心机，办公室也合适", "category": "极简", "color_tone": "红色", "scene": "通勤", "nail_shape": "短甲", "price": 138},
+    {"name": "墨绿方甲酷飒款", "desc": "秋冬穿搭绝配", "category": "手绘", "color_tone": "绿色", "scene": "派对", "nail_shape": "方甲", "price": 178},
+    {"name": "裸色渐变长甲", "desc": "显手长，气质挂", "category": "裸色", "color_tone": "裸色", "scene": "约会", "nail_shape": "长甲", "price": 168},
+    {"name": "樱花粉猫眼", "desc": "甜而不腻，约会必备", "category": "猫眼", "color_tone": "粉色", "scene": "约会", "nail_shape": "圆甲", "price": 178},
+    {"name": "焦糖拿铁短甲", "desc": "低调显白，通勤首选", "category": "通勤", "color_tone": "咖色", "scene": "通勤", "nail_shape": "短甲", "price": 138},
+    {"name": "香槟金跳色", "desc": "年会、婚礼都撑得住", "category": "手绘", "color_tone": "金色", "scene": "婚礼", "nail_shape": "长甲", "price": 218},
+    {"name": "豆沙粉法式", "desc": "温柔显气色", "category": "裸色", "color_tone": "粉色", "scene": "约会", "nail_shape": "圆甲", "price": 158},
+    {"name": "雾霾蓝极简", "desc": "冷调高级感", "category": "极简", "color_tone": "蓝色", "scene": "通勤", "nail_shape": "短甲", "price": 148},
+    {"name": "琥珀色晕染", "desc": "秋冬氛围感拉满", "category": "手绘", "color_tone": "橘色", "scene": "休闲", "nail_shape": "长甲", "price": 188},
+    {"name": "蜜桃乌龙甲", "desc": "春夏显嫩", "category": "果冻", "color_tone": "粉色", "scene": "约会", "nail_shape": "圆甲", "price": 168},
+    {"name": "黑色酷感猫眼", "desc": "夜场、派对高调款", "category": "猫眼", "color_tone": "黑色", "scene": "派对", "nail_shape": "长甲", "price": 228},
+    {"name": "薰衣草紫短甲", "desc": "冷白皮友好", "category": "果冻", "color_tone": "紫色", "scene": "休闲", "nail_shape": "短甲", "price": 138},
+    {"name": "奶茶色渐变", "desc": "日常百搭不挑人", "category": "裸色", "color_tone": "咖色", "scene": "约会", "nail_shape": "圆甲", "price": 158},
+    {"name": "玫瑰金细闪", "desc": "轻奢感，见家长加分", "category": "手绘", "color_tone": "粉色", "scene": "面试", "nail_shape": "长甲", "price": 188},
+    {"name": "薄荷绿清新甲", "desc": "夏日清凉感", "category": "果冻", "color_tone": "绿色", "scene": "休闲", "nail_shape": "短甲", "price": 128},
+    {"name": "酒红丝绒甲", "desc": "显白经典", "category": "手绘", "color_tone": "红色", "scene": "派对", "nail_shape": "长甲", "price": 198},
+    {"name": "裸透果冻甲", "desc": "自然健康甲感", "category": "果冻", "color_tone": "裸色", "scene": "通勤", "nail_shape": "圆甲", "price": 138},
+    {"name": "灰粉莫兰迪", "desc": "低饱和高级灰粉", "category": "极简", "color_tone": "粉色", "scene": "约会", "nail_shape": "短甲", "price": 158},
+    {"name": "通勤黑白极简", "desc": "职场女性的高级选择", "category": "极简", "color_tone": "黑色", "scene": "通勤", "nail_shape": "短甲", "price": 128},
+    {"name": "璀璨贴钻甲", "desc": "华丽不失优雅", "category": "手绘", "color_tone": "白色", "scene": "婚礼", "nail_shape": "长甲", "price": 258},
+    {"name": "渐变蓝海风", "desc": "如海风拂过指尖", "category": "手绘", "color_tone": "蓝色", "scene": "休闲", "nail_shape": "圆甲", "price": 188},
 ]
 
+# 3家店铺
+MERCHANTS = [
+    {
+        "name": "指间时光·美甲工作室", "city": "广州", "district": "天河区",
+        "address": "天河路385号太古汇B1", "business_hours": "10:00-21:00",
+        "phone": "13800001001", "rating": 4.8, "description": "专注日式美甲多年，环境优雅舒适，用专业技艺让你的指尖绽放光彩。",
+        "tags": ["通勤", "猫眼", "裸色"],
+    },
+    {
+        "name": "闪耀工厂·美甲工坊", "city": "广州", "district": "海珠区",
+        "address": "江南西路66号富力海珠城2楼", "business_hours": "11:00-22:00",
+        "phone": "13800001002", "rating": 4.7, "description": "潮流美甲工厂，紧跟时尚前沿，各种风格应有尽有！",
+        "tags": ["手绘", "极简", "果冻"],
+    },
+    {
+        "name": "北极星·潮流美甲", "city": "广州", "district": "越秀区",
+        "address": "北京路168号光明广场3楼", "business_hours": "10:30-21:30",
+        "phone": "13800001003", "rating": 4.9, "description": "市中心热门美甲店，技术一流，服务贴心，好评如潮。",
+        "tags": ["猫眼", "手绘", "裸色"],
+    },
+]
 
-async def seed_data():
+# 初始用户
+USERS = [
+    {"username": "xiaomei", "nickname": "小美", "bio": "热爱美甲的小仙女", "role": "user"},
+    {"username": "luna", "nickname": "Luna", "bio": "面试见家长都不踩雷", "role": "user"},
+    {"username": "heifeng", "nickname": "黑猫", "bio": "夜场派对达人", "role": "user"},
+    {"username": "nana", "nickname": "Nana", "bio": "气质手控", "role": "user"},
+    {"username": "yinzi", "nickname": "樱子", "bio": "甜腻约会必备", "role": "user"},
+    {"username": "merchant01", "nickname": "指尖时光主理人", "bio": "", "role": "merchant"},
+    {"username": "merchant02", "nickname": "闪耀工厂主理人", "bio": "", "role": "merchant"},
+    {"username": "merchant03", "nickname": "北极星主理人", "bio": "", "role": "merchant"},
+]
+
+# 帖子
+POSTS = [
+    {"title": "通勤奶咖短甲", "content": "适合黄皮的显白通勤款，超赞！", "style_idx": 0, "user_idx": 0},
+    {"title": "法式裸粉气质甲", "content": "面试/见家长都不踩雷的法式美甲", "style_idx": 1, "user_idx": 1},
+    {"title": "黑色酷感猫眼", "content": "夜场派对的焦点，猫眼效果太绝了", "style_idx": 14, "user_idx": 2},
+    {"title": "裸色渐变长甲", "content": "气质款，显手长绝了", "style_idx": 6, "user_idx": 3},
+    {"title": "樱花粉猫眼", "content": "约会神器，太甜了", "style_idx": 7, "user_idx": 4},
+    {"title": "香槟金跳色", "content": "年会婚礼两相宜", "style_idx": 9, "user_idx": 0},
+    {"title": "果冻奶橘疗愈甲", "content": "治愈系美甲，周末放松必备", "style_idx": 3, "user_idx": 1},
+    {"title": "雾霾蓝极简", "content": "冷色调的高级感", "style_idx": 11, "user_idx": 2},
+    {"title": "焦糖拿铁短甲", "content": "低调显白，办公室必备", "style_idx": 8, "user_idx": 3},
+    {"title": "薄荷绿清新甲", "content": "夏日必备清凉款", "style_idx": 18, "user_idx": 4},
+]
+
+TAGS = [
+    "猫眼", "通勤", "裸色", "极简", "手绘", "彩绘", "日式", "贴钻",
+    "果冻", "渐变", "法式", "闪粉", "晕染", "跳色", "方甲", "圆甲",
+    "短甲", "长甲", "杏仁甲",
+]
+
+
+async def main():
+    print("Creating tables...")
     await init_db()
 
-    xlsx_path = Path(__file__).parent.parent / "命题三美甲评测数据（对外版）.xlsx"
-    if not xlsx_path.exists():
-        xlsx_path = Path(__file__).parent / "命题三美甲评测数据（对外版）.xlsx"
+    db = async_session_factory()
 
-    async with async_session() as session:
-        # ── 1. Import nail styles ─────────────────────────
-        if xlsx_path.exists():
-            df_styles = pd.read_excel(xlsx_path, sheet_name="款式图")
-            for i, (_, row) in enumerate(df_styles.iterrows()):
-                style = NailStyle(
-                    name=STYLE_NAMES[i] if i < len(STYLE_NAMES) else f"款式{row.get('序号', i+1)}",
-                    original_url=str(row.get("原始款式图URL", "")),
-                    enhanced_url=str(row.get("增强后款式图URL", "")),
-                    category=CATEGORIES[i % len(CATEGORIES)],
-                    color_tone=COLORS[i % len(COLORS)],
-                    tags=[CATEGORIES[i % len(CATEGORIES)], COLORS[i % len(COLORS)]],
-                    description=f"{STYLE_NAMES[i] if i < len(STYLE_NAMES) else '精美款式'} — {CATEGORIES[i % len(CATEGORIES)]}风格",
-                    popularity=random.randint(10, 200),
-                    price=PRICE_RANGES[i % len(PRICE_RANGES)],
-                )
-                session.add(style)
-        else:
-            for i in range(25):
-                style = NailStyle(
-                    name=STYLE_NAMES[i],
-                    original_url="",
-                    enhanced_url="",
-                    category=CATEGORIES[i % len(CATEGORIES)],
-                    color_tone=COLORS[i % len(COLORS)],
-                    tags=[CATEGORIES[i % len(CATEGORIES)]],
-                    description=f"{STYLE_NAMES[i]} — {CATEGORIES[i % len(CATEGORIES)]}风格",
-                    popularity=random.randint(10, 200),
-                    price=PRICE_RANGES[i % len(PRICE_RANGES)],
-                )
-                session.add(style)
-
-        # ── 2. Import hand images ─────────────────────────
-        seen_urls = set()
-        if xlsx_path.exists():
-            df_hands = pd.read_excel(xlsx_path, sheet_name="手图")
-            skin_tones = ["白皙", "自然", "小麦", "白皙", "自然"]
-            hand_types = ["纤细", "标准", "圆润", "标准", "纤细"]
-            for i, (_, row) in enumerate(df_hands.iterrows()):
-                url = str(row.get("手图URL", ""))
-                if pd.isna(row.get("手图URL")) or url in seen_urls:
-                    continue
-                seen_urls.add(url)
-                hand = HandImage(
-                    image_url=url,
-                    skin_tone=skin_tones[i % 5],
-                    hand_type=hand_types[i % 5],
-                )
-                session.add(hand)
-
-        await session.flush()
-
-        # ── 3. Generate 30 days of metrics ─────────────────
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        style_ids = list(range(1, 26))
-
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            for sid in style_ids:
-                base = random.randint(5, 50)
-                day_factor = 1.0 + (0.05 * day_offset)
-                views = int(base * day_factor * random.uniform(0.5, 2.0))
-                tryons = int(views * random.uniform(0.1, 0.4))
-                favorites = int(tryons * random.uniform(0.1, 0.3))
-                shares = int(tryons * random.uniform(0.05, 0.15))
-                orders = int(tryons * random.uniform(0.2, 0.5))
-                refunds = int(orders * random.uniform(0.02, 0.08))
-                duration = random.randint(20, 120)
-
-                hot_score = round(
-                    tryons * 0.35 + orders * 0.25 + favorites * 0.2 + views * 0.15 + shares * 0.05, 2
-                )
-
-                metric = StyleMetrics(
-                    style_id=sid, date=day,
-                    views=views, tryons=tryons, favorites=favorites,
-                    shares=shares, orders=orders, refunds=refunds,
-                    avg_duration=duration, hot_score=hot_score,
-                )
-                session.add(metric)
-
-        await session.flush()
-
-        # ── 4. Generate orders (last 30 days) ──────────────
-        user_ids = [f"u{1000 + i:05d}" for i in range(80)]
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            daily_orders = random.randint(8, 25)  # 8-25 单/天
-            for oi in range(daily_orders):
-                sid = random.choice(style_ids)
-                is_new = random.random() < 0.45  # 45% 新客
-                original = PRICE_RANGES[(sid - 1) % len(PRICE_RANGES)]
-                coupon = random.choice([0, 0, 0, 5, 5, 10, 10, 15, 20, 30])
-                amount = max(original - coupon, original * 0.5)
-                hour = random.randint(9, 22)
-                minute = random.randint(0, 59)
-                order_time = day.replace(hour=hour, minute=minute)
-
-                order = Order(
-                    order_no=f"NV{day.strftime('%y%m%d')}{oi:04d}",
-                    style_id=sid,
-                    user_id=random.choice(user_ids),
-                    amount=amount,
-                    original_amount=original,
-                    coupon_discount=coupon,
-                    status="paid",
-                    payment_method=random.choice(["wechat", "alipay", "wechat", "wechat"]),
-                    is_new_customer=is_new,
-                    created_at=order_time,
-                )
-                session.add(order)
-
-        await session.flush()
-
-        # ── 5. Generate refunds (~5% of orders) ───────────
-        order_ids = [r[0] for r in (await session.execute(
-            select(Order.id)
-        )).all()]
-        refund_order_ids = random.sample(order_ids, int(len(order_ids) * 0.05))
-        for oid in refund_order_ids:
-            refund_amount = random.uniform(50, 200)
-            refund = Refund(
-                order_id=oid,
-                amount=round(refund_amount, 2),
-                reason=random.choice(REFUND_REASONS),
-                status=random.choice(["completed", "completed", "completed", "approved"]),
-                created_at=today - timedelta(days=random.randint(0, 29), hours=random.randint(0, 23)),
+    try:
+        # ========== 用户 ==========
+        user_objs = []
+        for u in USERS:
+            obj = User(
+                username=u["username"], password_hash=hash_password("123456"),
+                nickname=u["nickname"], bio=u["bio"], role=u["role"],
             )
-            session.add(refund)
+            db.add(obj)
+            user_objs.append(obj)
+        await db.flush()
+        print(f"Created {len(user_objs)} users")
 
-        await session.flush()
-
-        # ── 6. Generate reviews (~60% of orders) ───────────
-        reviewed = set()
-        for _ in range(int(len(order_ids) * 0.6)):
-            oid = random.choice(order_ids)
-            if oid in reviewed: continue
-            reviewed.add(oid)
-            rating_weights = [0.05, 0.05, 0.1, 0.25, 0.55]  # 5星55%, 4星25%...
-            rating = random.choices([1, 2, 3, 4, 5], weights=rating_weights, k=1)[0]
-            if rating >= 4:
-                comment = random.choice(REVIEW_POSITIVE)
-            elif rating == 3:
-                comment = random.choice(REVIEW_NEUTRAL)
-            else:
-                comment = random.choice(REVIEW_NEGATIVE)
-            tags = ", ".join(random.sample(REVIEW_TAGS, random.randint(1, 3)))
-
-            review = Review(
-                order_id=oid,
-                style_id=random.choice(style_ids),
-                user_id=random.choice(user_ids),
-                rating=rating,
-                tags=tags,
-                comment=comment,
-                has_photo=rating >= 4 and random.random() < 0.4,
-                created_at=today - timedelta(days=random.randint(0, 29)),
+        # ========== 商家 ==========
+        merchant_objs = []
+        for i, m in enumerate(MERCHANTS):
+            obj = Merchant(
+                name=m["name"], city=m["city"], district=m["district"],
+                address=m["address"], business_hours=m["business_hours"],
+                phone=m["phone"], rating=m["rating"], description=m["description"],
+                tags=m["tags"], images=[],
+                user_id=user_objs[5 + i].id if 5 + i < len(user_objs) else None,
             )
-            session.add(review)
+            db.add(obj)
+            merchant_objs.append(obj)
+        await db.flush()
+        print(f"Created {len(merchant_objs)} merchants")
 
-        await session.flush()
+        # ========== 标签 ==========
+        tag_objs = {}
+        for t_name in TAGS:
+            obj = NailTag(name=t_name, tag_type="style")
+            db.add(obj)
+            tag_objs[t_name] = obj
+        await db.flush()
+        print(f"Created {len(tag_objs)} tags")
 
-        # ── 7. Daily revenue summary (30 days) ─────────────
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            day_start = day
-            day_end = day + timedelta(days=1)
-
-            # Aggregate from orders
-            order_rows = (await session.execute(
-                select(
-                    func.count(Order.id), func.sum(Order.amount), func.sum(Order.coupon_discount),
-                    func.sum(case((Order.is_new_customer == True, 1), else_=0)),
-                    func.sum(case((Order.is_new_customer == False, 1), else_=0)),
-                ).where(Order.created_at >= day_start, Order.created_at < day_end)
-            )).first()
-
-            total_orders = order_rows[0] or 0
-            gross = order_rows[1] or 0.0
-            coupon_total = order_rows[2] or 0.0
-            new_cust = int(order_rows[3] or 0)
-            repeat_cust = int(order_rows[4] or 0)
-
-            # Aggregate from refunds
-            refund_rows = (await session.execute(
-                select(func.count(Refund.id), func.sum(Refund.amount))
-                .where(Refund.created_at >= day_start, Refund.created_at < day_end)
-            )).first()
-
-            refund_cnt = refund_rows[0] or 0
-            refund_amt = refund_rows[1] or 0.0
-
-            net = round(gross - refund_amt, 2)
-            aov = round(gross / total_orders, 2) if total_orders > 0 else 0.0
-
-            rev = DailyRevenue(
-                date=day,
-                gross_revenue=round(gross, 2),
-                net_revenue=net,
-                order_count=total_orders,
-                refund_amount=round(refund_amt, 2),
-                refund_count=refund_cnt,
-                new_customer_orders=new_cust,
-                repeat_customer_orders=repeat_cust,
-                coupon_discount_total=round(coupon_total, 2),
-                avg_order_value=aov,
+        # ========== 美甲款式（25款，均分3家店铺）==========
+        style_objs = []
+        for i, s in enumerate(STYLES):
+            mid = i % 3  # 均分到3家店铺
+            obj = NailStyle(
+                name=s["name"], description=s["desc"],
+                image_url=f"styles/style_{i + 1:02d}.png",
+                category=s["category"], color_tone=s["color_tone"],
+                scene=s["scene"], nail_shape=s["nail_shape"],
+                price=s["price"], original_price=int(s["price"] * 1.2),
+                merchant_id=merchant_objs[mid].id,
+                popularity=100 + (25 - i) * 5 + i * 3,  # varied popularity
             )
-            session.add(rev)
+            db.add(obj)
+            style_objs.append(obj)
+        await db.flush()
+        print(f"Created {len(style_objs)} nail styles")
 
-        # ── 8. Traffic metrics (30 days) ─────────────────
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            exposure = random.randint(1500, 5000)
-            clicks = int(exposure * random.uniform(0.05, 0.15))
-            visits = int(clicks * random.uniform(0.3, 0.7))
-            conversions = int(visits * random.uniform(0.08, 0.25))
-            ctr = round(clicks / exposure * 100, 2)
-            cvr = round(conversions / visits * 100, 2) if visits > 0 else 0
+        # ========== 款式-标签关联 ==========
+        tag_assignments = [
+            (0, ["通勤", "短甲"]), (1, ["裸色", "法式"]), (2, ["猫眼", "长甲"]),
+            (3, ["果冻", "圆甲"]), (4, ["极简", "法式", "短甲"]), (5, ["手绘", "方甲"]),
+            (6, ["裸色", "渐变", "长甲"]), (7, ["猫眼", "圆甲"]), (8, ["通勤", "短甲"]),
+            (9, ["手绘", "跳色", "长甲"]), (10, ["裸色", "法式"]), (11, ["极简", "短甲"]),
+            (12, ["手绘", "晕染"]), (13, ["果冻", "圆甲"]), (14, ["猫眼", "长甲"]),
+            (15, ["果冻", "短甲"]), (16, ["裸色", "渐变"]), (17, ["手绘", "闪粉"]),
+            (18, ["果冻", "短甲"]), (19, ["手绘", "长甲"]), (20, ["果冻", "裸色"]),
+            (21, ["极简", "短甲"]), (22, ["极简", "短甲"]), (23, ["手绘", "贴钻", "长甲"]),
+            (24, ["手绘", "渐变"]),
+        ]
+        for style_idx, tag_names in tag_assignments:
+            for t_name in tag_names:
+                if t_name in tag_objs:
+                    db.add(StyleTag(style_id=style_objs[style_idx].id, tag_id=tag_objs[t_name].id))
+        await db.flush()
+        print("Style-tag associations created")
 
-            tm = TrafficMetrics(
-                date=day, exposure=exposure, click=clicks,
-                visit=visits, order_conversion=conversions,
-                ctr=ctr, cvr=cvr,
-                source=random.choice(["organic", "organic", "search", "ad", "recommend"]),
+        # ========== 帖子 ==========
+        post_objs = []
+        for p in POSTS:
+            obj = Post(
+                title=p["title"], content=p["content"],
+                image_url=f"styles/style_{p['style_idx'] + 1:02d}.png",
+                user_id=user_objs[p["user_idx"]].id,
+                style_id=style_objs[p["style_idx"]].id,
+                likes_count=p["style_idx"] * 15 + 10,
             )
-            session.add(tm)
+            db.add(obj)
+            post_objs.append(obj)
+        await db.flush()
+        print(f"Created {len(post_objs)} posts")
 
-        # ── 9. Coupon usage (30 days) ─────────────────────
-        campaigns = ["新人立减券", "满100减10", "满200减25", "老客专属券", "节日活动券"]
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            issued = random.randint(20, 80)
-            used = int(issued * random.uniform(0.15, 0.45))
-            cu = CouponUsage(
-                date=day, issued=issued, used=used,
-                discount_total=round(used * random.uniform(8, 25), 2),
-                usage_rate=round(used / issued * 100, 1),
-                campaign=random.choice(campaigns),
+        # ========== 预设手图 ==========
+        for i in range(3):
+            h = HandImage(
+                user_id=None, image_url=f"hands/preset_{i + 1}.png",
+                skin_tone="natural", hand_type="left", is_preset=True,
             )
-            session.add(cu)
+            db.add(h)
+        await db.flush()
+        print("Created preset hand images")
 
-        # ── 10. Mock tryon records ─────────────────────────
-        for _ in range(200):
-            rec = TryonRecord(
-                hand_image_id=random.randint(1, max(1, len(seen_urls))),
-                nail_style_id=random.randint(1, 25),
-                result_url=f"/results/mock_{random.randint(1, 10)}.png",
-                duration_ms=random.randint(200, 3000),
-                created_at=today - timedelta(hours=random.randint(0, 720)),
-            )
-            session.add(rec)
+        await db.commit()  # Explicit commit
 
-        await session.commit()
+        print("\n===== 数据导入完成 =====")
+        print(f"用户: {len(user_objs)}")
+        print(f"商家: {len(merchant_objs)}")
+        print(f"美甲款式: {len(style_objs)}")
+        print(f"帖子: {len(post_objs)}")
+        print(f"标签: {len(tag_objs)}")
+        print("\n默认密码: 123456")
 
-    print(f"✅ 数据导入完成:")
-    print(f"   25 款式 (含价格)")
-    print(f"   {len(seen_urls) or 10} 手图")
-    print(f"   750 条日指标")
-    print(f"   ~{len(order_ids) if 'order_ids' in dir() else '600'} 订单")
-    print(f"   ~{len(refund_order_ids)} 退款")
-    print(f"   ~{len(reviewed)} 评价")
-    print(f"   30 天营收汇总")
-    print(f"   30 天流量数据")
-    print(f"   30 天优惠券数据")
-    print(f"   200 条试戴记录")
+    except Exception as e:
+        await db.rollback()
+        print(f"Error: {e}")
+        raise
+    finally:
+        await db.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_data())
+    asyncio.run(main())
