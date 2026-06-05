@@ -20,6 +20,7 @@ const { Title } = Typography;
 export default function TryOnPage() {
   const [search] = useSearchParams();
   const nav = useNavigate();
+  const goChat = () => nav('/chat');
 
   /* ──────── URL 参数预选 ──────── */
   const preMerchantId = Number(search.get('merchant_id')) || 0;
@@ -195,6 +196,7 @@ export default function TryOnPage() {
       title: '确认删除',
       content: '确定删除该手图吗？',
       okText: '确认删除', cancelText: '取消',
+      maskClosable: true,
       okButtonProps: { danger: true, style: { borderRadius: 8 } },
       cancelButtonProps: { style: { borderRadius: 8 } },
       onOk: async () => {
@@ -218,6 +220,7 @@ export default function TryOnPage() {
       title: '确认删除',
       content: '确定要删除这条试戴历史记录吗？',
       okText: '确认删除', cancelText: '取消',
+      maskClosable: true,
       okButtonProps: { danger: true, style: { borderRadius: 8 } },
       cancelButtonProps: { style: { borderRadius: 8 } },
       onOk: async () => {
@@ -252,7 +255,30 @@ export default function TryOnPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#5a7a52' }}>AI美甲试戴</Title>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+        <Title level={2} style={{ color: '#222', margin: 0 }}>AI美甲试戴</Title>
+        <button
+          onClick={goChat}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '6px 14px', borderRadius: 24,
+            border: '1.5px solid #E8708D', background: '#fff',
+            color: '#E8708D', fontSize: 13, fontWeight: 500,
+            cursor: 'pointer', transition: 'all .2s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#FDF5F7';
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(232,112,141,0.15)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = '#fff';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <span className="ask-blob-mini" />
+          问问小美
+        </button>
+      </div>
 
       <Row gutter={24}>
         {/* ──── 左侧：商家 + 手图 ──── */}
@@ -260,7 +286,7 @@ export default function TryOnPage() {
           {/* 商家选择 */}
           <Card
             title={<span><ShopOutlined style={{ marginRight: 6 }} />选择商家</span>}
-            style={{ borderRadius: 12, border: '1px solid #e8ede6', marginBottom: 16 }}
+            style={{ borderRadius: 12, border: '1px solid #F0F0F0', marginBottom: 16 }}
           >
             <Select
               showSearch
@@ -278,7 +304,7 @@ export default function TryOnPage() {
           {/* 手图选择 */}
           <Card
             title="选择手图"
-            style={{ borderRadius: 12, border: '1px solid #e8ede6' }}
+            style={{ borderRadius: 12, border: '1px solid #F0F0F0' }}
           >
             <Upload
               beforeUpload={file => { onUploadHand(file); return false; }}
@@ -305,7 +331,7 @@ export default function TryOnPage() {
                     onClick={() => setSelectedHand(h.id)}
                     title={h.is_preset ? '预设手图' : '我的手图'}
                     style={{
-                      border: selectedHand === h.id ? '3px solid #7d9d7a' : '3px solid transparent',
+                      border: selectedHand === h.id ? '3px solid #E8708D' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, height: 100, position: 'relative',
                       transition: 'border-color .15s',
@@ -333,7 +359,7 @@ export default function TryOnPage() {
                     {selectedHand === h.id && (
                       <div style={{
                         position: 'absolute', top: 2, right: 2, zIndex: 2,
-                        background: '#7d9d7a', color: '#fff',
+                        background: '#E8708D', color: '#fff',
                         borderRadius: '50%', width: 20, height: 20,
                         fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>✓</div>
@@ -349,7 +375,7 @@ export default function TryOnPage() {
         <Col xs={24} md={8}>
           <Card
             title="选择美甲款式"
-            style={{ borderRadius: 12, border: '1px solid #e8ede6' }}
+            style={{ borderRadius: 12, border: '1px solid #F0F0F0' }}
           >
             {!selectedMerchant ? (
               <div style={{ padding: 30, textAlign: 'center', color: '#bbb', fontSize: 13 }}>
@@ -368,7 +394,7 @@ export default function TryOnPage() {
                     key={s.id}
                     onClick={() => setSelectedStyle(s.id)}
                     style={{
-                      border: selectedStyle === s.id ? '3px solid #7d9d7a' : '3px solid transparent',
+                      border: selectedStyle === s.id ? '3px solid #E8708D' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, textAlign: 'center',
                       transition: 'border-color .15s',
@@ -382,7 +408,7 @@ export default function TryOnPage() {
                     <div style={{ fontSize: 11, padding: '2px 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.name}
                     </div>
-                    <div style={{ fontSize: 11, color: '#7d9d7a', fontWeight: 600, paddingBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: '#E8708D', fontWeight: 600, paddingBottom: 4 }}>
                       ¥{s.price}
                     </div>
                   </div>
@@ -396,7 +422,7 @@ export default function TryOnPage() {
         <Col xs={24} md={8}>
           <Card
             title="试戴效果"
-            style={{ borderRadius: 12, border: '1px solid #e8ede6' }}
+            style={{ borderRadius: 12, border: '1px solid #F0F0F0' }}
           >
             <Button
               type="primary"
@@ -418,7 +444,7 @@ export default function TryOnPage() {
                 disabled={!selectedMerchant || !selectedHand || !selectedStyle}
                 style={{
                   marginBottom: 12, borderRadius: 8, height: 38,
-                  borderColor: '#7d9d7a', color: '#7d9d7a',
+                  borderColor: '#E8708D', color: '#E8708D',
                 }}
               >
                 重新生成
@@ -430,10 +456,17 @@ export default function TryOnPage() {
             {selectedMerchant && !selectedStyle && <div style={{ color: '#bbb', fontSize: 12, marginBottom: 8 }}>← 请选择美甲款式</div>}
 
             {loading && (
-              <div style={{ textAlign: 'center', padding: 24 }}>
-                <Spin indicator={<LoadingOutlined style={{ fontSize: 36, color: '#7d9d7a' }} spin />} />
-                <div style={{ marginTop: 12, color: '#999', fontSize: 13 }}>
-                  正在调用AI模型生成试戴效果，请耐心等待...
+              <div className="tryon-generating">
+                <div className="tryon-generating-canvas">
+                  <div className="paint-ribbon" />
+                  <div className="paint-ribbon" />
+                  <div className="paint-ribbon" />
+                  <div className="paint-ribbon" />
+                  <div className="paint-ribbon" />
+                </div>
+                <div className="tryon-generating-overlay">
+                  <div className="gen-text">AI 正在创作...</div>
+                  <div className="gen-sub">正在生成AI试戴效果图</div>
                 </div>
               </div>
             )}
@@ -458,8 +491,8 @@ export default function TryOnPage() {
 
       {/* ══════════════════════ 试戴历史 ══════════════════════ */}
       <Card
-        title={<span style={{ color: '#5a7a52', fontSize: 16 }}>试戴历史</span>}
-        style={{ borderRadius: 12, border: '1px solid #e8ede6', marginTop: 24 }}
+        title={<span style={{ color: '#222', fontSize: 16 }}>试戴历史</span>}
+        style={{ borderRadius: 12, border: '1px solid #F0F0F0', marginTop: 24 }}
       >
         {historyLoading ? (
           <Spin style={{ display: 'block', padding: 32 }} />
@@ -476,13 +509,13 @@ export default function TryOnPage() {
                     <div
                       onClick={() => onHistoryClick(item)}
                       style={{
-                        borderRadius: 10, overflow: 'hidden', border: '1px solid #e8ede6',
+                        borderRadius: 10, overflow: 'hidden', border: '1px solid #F0F0F0',
                         cursor: 'pointer', transition: 'transform .15s, box-shadow .15s',
                         background: '#fff', position: 'relative',
                       }}
                       onMouseEnter={e => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(199,121,134,0.15)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,36,66,0.12)';
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.transform = '';

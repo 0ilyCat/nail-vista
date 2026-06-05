@@ -6,6 +6,7 @@ import {
   ShopOutlined, UserOutlined, HeartOutlined, DashboardOutlined,
   CalendarOutlined, SearchOutlined, LogoutOutlined, LoginOutlined,
 } from '@ant-design/icons';
+import { imgUrl } from '../services/image';
 
 const { Header, Content, Footer } = Layout;
 
@@ -41,28 +42,22 @@ export default function AppLayout() {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f8f9f8' }}>
+    <Layout style={{ minHeight: '100vh', background: '#FAFAFA' }}>
       <Header style={{
-        background: '#fff',
+        background: 'rgba(255, 255, 255, 0.72)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 28px',
-        borderBottom: '1px solid #e8ede6',
+        borderBottom: '1px solid rgba(240, 240, 240, 0.6)',
         height: 64,
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
       }}>
-        <Link to="/" style={{
-          fontWeight: 800,
-          fontSize: 22,
-          color: '#7d9d7a',
-          marginRight: 36,
-          whiteSpace: 'nowrap',
-          letterSpacing: '-0.5px',
-          textDecoration: 'none',
-        }}>
+        <Link to="/" className="logo-brand">
           NailVista
         </Link>
 
@@ -70,11 +65,13 @@ export default function AppLayout() {
           mode="horizontal"
           selectedKeys={[loc.pathname]}
           items={menuItems}
+          className="main-nav-menu"
           style={{
             flex: 1,
             border: 'none',
             fontSize: 15,
             fontWeight: 500,
+            background: 'transparent',
           }}
         />
 
@@ -85,7 +82,7 @@ export default function AppLayout() {
             background: searchFocused ? '#fff' : '#f5f5f5',
             borderRadius: 24,
             padding: '2px 2px 2px 16px',
-            border: searchFocused ? '1.5px solid #7d9d7a' : '1.5px solid transparent',
+            border: searchFocused ? '1.5px solid #E8708D' : '1.5px solid transparent',
             transition: 'all .25s cubic-bezier(0.4, 0, 0.2, 1)',
             width: searchFocused ? 280 : 220,
           }}>
@@ -151,9 +148,7 @@ export default function AppLayout() {
                 { key: 'logout', label: '退出登录', icon: <LogoutOutlined />, onClick: onLogout },
               ]}}>
               <div className="avatar-hover" style={{ display: 'inline-block', cursor: 'pointer', transition: 'transform .2s' }}>
-                <Avatar style={{ backgroundColor: '#7d9d7a' }}>
-                  {user.nickname?.[0]}
-                </Avatar>
+                <Avatar src={user.avatar_url ? imgUrl(user.avatar_url) : undefined} icon={<UserOutlined />} style={{ backgroundColor: '#e0e0e0', color: '#999' }} />
               </div>
               </Dropdown>
             </>
@@ -177,7 +172,7 @@ export default function AppLayout() {
       <Footer style={{
         textAlign: 'center',
         background: '#fff',
-        borderTop: '1px solid #e8ede6',
+        borderTop: '1px solid #F0F0F0',
         color: '#999',
         fontSize: 13,
         padding: '20px 0',

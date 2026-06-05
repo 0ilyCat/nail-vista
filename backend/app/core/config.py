@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     OPENCLAW_BASE_URL: str = "http://127.0.0.1:18789"
     OPENCLAW_GATEWAY_TOKEN: str = "nailvista-dev-token"
 
+    # Gateway WebSocket 重连与超时配置
+    OPENCLAW_WS_RECONNECT_DELAY: int = 3        # 断线重连间隔(秒)
+    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 5  # 最大重连次数
+    OPENCLAW_WS_REQUEST_TIMEOUT: int = 300       # 单次请求超时(秒)
+
     # 阿里百炼图生模型 (AI试戴)
     DASHSCOPE_API_KEY: str = ""
 

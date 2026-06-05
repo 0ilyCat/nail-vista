@@ -93,7 +93,7 @@ export const appointmentsAPI = {
 // ============ AI对话 ============
 export const chatAPI = {
   send: (data: { message: string; session_key?: string }) => api.post('/chat/user', data),
-  getSessions: () => api.get('/chat/sessions'),
+  getSessions: (agentType?: string) => api.get('/chat/sessions', { params: agentType ? { agent_type: agentType } : {} }),
   getMessages: (key: string) => api.get(`/chat/sessions/${key}`),
   deleteSession: (key: string) => api.delete(`/chat/sessions/${key}`),
 };

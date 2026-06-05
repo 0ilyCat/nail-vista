@@ -31,7 +31,7 @@ export default function MerchantsPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={2} style={{ color: '#5a7a52' }}>店家专区</Title>
+      <Title level={2} style={{ color: '#222' }}>店家专区</Title>
       <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
         <Select allowClear placeholder="城市" style={{ width: 120 }} value={cityFilter || undefined}
           onChange={v => setCityFilter(v || '')} options={cities.map((c: any) => ({ label: c.city, value: c.city }))} />
@@ -45,7 +45,7 @@ export default function MerchantsPage() {
                 <Card
                   hoverable
                   cover={
-                    <div style={{ height: 180, overflow: 'hidden', background: '#eef5eb' }}>
+                    <div style={{ height: 180, overflow: 'hidden', background: '#FDF5F7' }}>
                       {coverImg ? (
                         <img
                           src={imgUrl(coverImg)}
@@ -56,8 +56,8 @@ export default function MerchantsPage() {
                         <div style={{
                           width: '100%', height: '100%', display: 'flex',
                           alignItems: 'center', justifyContent: 'center',
-                          fontSize: 48, color: '#a0b89d',
-                        }}>💅</div>
+                          fontSize: 48, color: '#FFB3BF',
+                        }}>暂无</div>
                       )}
                     </div>
                   }
@@ -69,7 +69,7 @@ export default function MerchantsPage() {
                   <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
                     {m.city}{m.district ? ` · ${m.district}` : ''}
                   </div>
-                  <div style={{ fontSize: 13, color: '#7d9d7a', marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, color: '#E8708D', marginBottom: 8 }}>
                     <StarOutlined /> {m.rating} · {m.review_count || 0} 条评价
                   </div>
                   <Link to={`/merchants/${m.id}`}>

@@ -44,7 +44,7 @@ export default function FavoritesPage() {
                     <img src={imgUrl(s.image_url)} alt={s.name} style={{ height: 160, objectFit: 'cover' }} />
                   } actions={[<Button size="small" danger onClick={() => unfavStyle(s.id)}>取消收藏</Button>]}>
                     <Link to={`/styles/${s.id}`}><strong>{s.name}</strong></Link>
-                    <div style={{ color: '#7d9d7a' }}>¥{s.price}</div>
+                    <div style={{ color: '#E8708D' }}>¥{s.price}</div>
                   </Card>
                 </Col>
               ))}

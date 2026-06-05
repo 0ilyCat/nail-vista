@@ -20,7 +20,7 @@ export default function SearchPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <Title level={3} style={{ color: '#5a7a52' }}>搜索: "{q}"</Title>
+      <Title level={3} style={{ color: '#222' }}>搜索: "{q}"</Title>
       {loading ? <Spin /> : (
         <Tabs items={[
           {

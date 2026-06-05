@@ -68,6 +68,15 @@ async def list_merchants(
             "total_pages": ceil(total / page_size) if total > 0 else 0}
 
 
+@router.get("/merchants/cities")
+async def merchant_cities(db: AsyncSession = Depends(get_db)):
+    logger.info("获取商家城市列表")
+    r = await db.execute(select(Merchant.city, func.count(Merchant.id)).group_by(Merchant.city))
+    result = [{"city": row[0], "count": row[1]} for row in r.all() if row[0]]
+    logger.info(f"城市列表返回 | count={len(result)}")
+    return result
+
+
 @router.get("/merchants/{merchant_id}")
 async def get_merchant(merchant_id: int, db: AsyncSession = Depends(get_db)):
     logger.info(f"获取商家详情 | id={merchant_id}")
@@ -98,15 +107,6 @@ async def get_merchant(merchant_id: int, db: AsyncSession = Depends(get_db)):
 
     logger.info(f"商家详情返回 | name={m.name} styles={len(style_outs)} slots={len(m.time_slots or [])}")
     return base
-
-
-@router.get("/merchants/cities")
-async def merchant_cities(db: AsyncSession = Depends(get_db)):
-    logger.info("获取商家城市列表")
-    r = await db.execute(select(Merchant.city, func.count(Merchant.id)).group_by(Merchant.city))
-    result = [{"city": row[0], "count": row[1]} for row in r.all() if row[0]]
-    logger.info(f"城市列表返回 | count={len(result)}")
-    return result
 
 
 # ========== 商家入驻 ==========

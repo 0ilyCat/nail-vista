@@ -1,20 +1,28 @@
 /**
- * 商家仪表盘 — 数据概览 | 款式管理 | 预约管理
+ * 商家仪表盘 — 数据概览（左：数据排行榜 | 右：运营助手AI对话）
+ * + 款式管理 + 预约管理 + 时段管理
  */
 import { useEffect, useState, useRef } from 'react';
 import {
   Card, Row, Col, Statistic, Tabs, Table, Button, Modal, Input,
   InputNumber, Select, message, Tag, Spin, Empty, Upload, Avatar, TimePicker,
+  Collapse,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   CheckOutlined, CloseOutlined, EyeOutlined, UploadOutlined,
   CalendarOutlined, DollarOutlined, ShoppingOutlined, ClockCircleOutlined,
-  RobotOutlined, SendOutlined, UserOutlined,
+  RobotOutlined, SendOutlined, UserOutlined, ToolOutlined,
+  LoadingOutlined, FireOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { dashboardAPI, adminAPI, opsChatAPI } from '../services/api';
+import { dashboardAPI, adminAPI, chatAPI } from '../services/api';
 import { imgUrl } from '../services/image';
+import useChatWS from '../hooks/useChatWS';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import ChartRenderer, { extractCharts, type ChartConfig } from '../components/ChartRenderer';
 import dayjs from 'dayjs';
 
 /* ───────── 状态标签配置 ───────── */
@@ -23,6 +31,23 @@ const STATUS: Record<string, { color: string; label: string }> = {
   confirmed: { color: 'blue',   label: '已确认' },
   completed: { color: 'green',  label: '已完成' },
   cancelled: { color: '#999',   label: '已取消' },
+};
+
+/* ── 运营助手预设提问 ── */
+const OPS_SUGGESTIONS = [
+  '今天数据怎么样？',
+  '最近什么款式最火？',
+  '给我看看7天营收趋势',
+  '帮我分析客户偏好',
+];
+
+/* ── 工具名称映射 ── */
+const TOOL_LABELS: Record<string, string> = {
+  get_dashboard_stats: '获取运营数据',
+  get_revenue_trends: '营收趋势分析',
+  get_style_ranking: '款式排行',
+  get_appointment_stats: '预约统计',
+  search_nail_styles: '搜索款式',
 };
 
 export default function DashboardPage() {
@@ -37,10 +62,16 @@ export default function DashboardPage() {
 
   /* ──────── 运营助手AI对话 ──────── */
   const [opsInput, setOpsInput] = useState('');
-  const [opsMessages, setOpsMessages] = useState<{ role: string; content: string }[]>([]);
-  const [opsLoading, setOpsLoading] = useState(false);
-  const [opsSessionKey, setOpsSessionKey] = useState<string | null>(null);
+  const { messages: opsMessages, send: opsSend, loading: opsLoading, connect: opsConnect,
+    sessionKey: opsSessionKey, clearMessages: opsClearMessages, setCurrentSessionKey: opsSetCurrentSessionKey } = useChatWS('ops');
   const opsChatRef = useRef<HTMLDivElement>(null);
+  const [opsSessions, setOpsSessions] = useState<any[]>([]);
+  const [opsActiveKey, setOpsActiveKey] = useState<string | null>(null);
+  const [opsHistoryMessages, setOpsHistoryMessages] = useState<any[]>([]);
+  const [opsSidebarOpen, setOpsSidebarOpen] = useState(false);
+
+  // 合并消息：历史 + WS实时
+  const allOpsMessages = [...opsHistoryMessages, ...opsMessages];
 
   /* ──────── 款式管理 ──────── */
   const [styles, setStyles] = useState<any[]>([]);
@@ -75,6 +106,8 @@ export default function DashboardPage() {
     if (parsed.role !== 'merchant') { nav('/'); return; }
     setUser(parsed);
     loadOverview();
+    opsConnect().catch(() => {});
+    loadOpsSessions();
     setPageLoading(false);
   }, []);
 
@@ -86,23 +119,116 @@ export default function DashboardPage() {
   };
 
   /* ── 运营助手聊天 ── */
+  const loadOpsSessions = () => {
+    chatAPI.getSessions('ops').then(r => {
+      const list = r.data || [];
+      setOpsSessions(list);
+    }).catch(() => {});
+  };
+
+  // 加载运营助手历史消息
+  useEffect(() => {
+    if (opsActiveKey) {
+      opsClearMessages();
+      setOpsHistoryMessages([]);
+      opsSetCurrentSessionKey(opsActiveKey);
+      chatAPI.getMessages(opsActiveKey).then(r => {
+        const msgs = r.data.messages || [];
+        setOpsHistoryMessages(msgs.map((m: any) => ({
+          ...m,
+          tool_calls: typeof m.tool_calls === 'string' ? JSON.parse(m.tool_calls || '[]') : (m.tool_calls || []),
+          thinking: typeof m.thinking === 'string' ? JSON.parse(m.thinking || '[]') : (m.thinking || []),
+        })));
+      }).catch(() => setOpsHistoryMessages([]));
+    } else {
+      opsSetCurrentSessionKey(null);
+      setOpsHistoryMessages([]);
+    }
+  }, [opsActiveKey]);
+
+  // 当 WS 创建新 session 时更新 activeKey
+  useEffect(() => {
+    if (opsSessionKey) {
+      setOpsActiveKey(opsSessionKey);
+      loadOpsSessions();
+    }
+  }, [opsSessionKey]);
+
+  const newOpsChat = () => {
+    setOpsActiveKey(null);
+    setOpsHistoryMessages([]);
+    opsClearMessages();
+    opsSetCurrentSessionKey(null);
+  };
+
+  const deleteOpsSession = async (key: string) => {
+    try {
+      await chatAPI.deleteSession(key);
+      if (opsActiveKey === key) {
+        setOpsActiveKey(null);
+        setOpsHistoryMessages([]);
+      }
+      loadOpsSessions();
+    } catch { /* ignore */ }
+  };
+
   const onOpsSend = async () => {
-    if (!opsInput.trim()) return;
+    if (!opsInput.trim() || opsLoading) return;
     const msg = opsInput;
     setOpsInput('');
-    setOpsMessages(prev => [...prev, { role: 'user', content: msg }]);
-    setOpsLoading(true);
-    try {
-      const res = await opsChatAPI.send({ message: msg, session_key: opsSessionKey || undefined });
-      setOpsMessages(prev => [...prev, { role: 'assistant', content: res.data.message.content }]);
-      if (!opsSessionKey) setOpsSessionKey(res.data.session_key);
-    } catch { message.error('分析失败'); }
-    finally { setOpsLoading(false); }
+    await opsSend(msg);
   };
 
   useEffect(() => {
     if (opsChatRef.current) opsChatRef.current.scrollTop = opsChatRef.current.scrollHeight;
-  }, [opsMessages]);
+  }, [allOpsMessages]);
+
+  /* ── 运营助手工具调用展示 ── */
+  const renderOpsToolCall = (toolCalls: any[]) => {
+    if (!toolCalls || toolCalls.length === 0) return null;
+    return (
+      <div style={{ marginBottom: 6 }}>
+        {toolCalls.map((entry: any, idx: number) => {
+          const hasResult = entry.result !== undefined;
+          const isSuccess = !entry.error && entry.result?.success !== false;
+          const label = TOOL_LABELS[entry.name] || entry.name;
+          return (
+            <div key={idx} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 10px', marginBottom: 3,
+              background: hasResult ? (isSuccess ? '#f6ffed' : '#fff2f0') : '#f8f8f8',
+              borderRadius: 6, fontSize: 11,
+            }}>
+              {hasResult ? (
+                <Tag color={isSuccess ? 'success' : 'error'} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>
+                  {isSuccess ? '完成' : '异常'}
+                </Tag>
+              ) : (
+                <LoadingOutlined style={{ color: '#E8708D', fontSize: 10 }} />
+              )}
+              <span style={{ color: '#333', fontWeight: 500 }}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /* ── 运营助手消息内容渲染（Markdown + 图表） ── */
+  const renderOpsContent = (content: string) => {
+    if (!content) return null;
+    const { cleanContent, charts } = extractCharts(content);
+    return (
+      <>
+        <div className="chat-markdown-body" style={{ fontSize: 13 }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{cleanContent}</ReactMarkdown>
+        </div>
+        {charts.map(chart => (
+          <ChartRenderer key={chart.id} config={chart.config} id={chart.id} />
+        ))}
+      </>
+    );
+  };
 
   /* ═══════════════════════════ 款式管理 ═══════════════════════════ */
   const loadStyles = async () => {
@@ -158,7 +284,6 @@ export default function DashboardPage() {
         message.success('款式已创建');
       }
 
-      // Upload image if selected
       if (styleImageFile && styleId) {
         try {
           await adminAPI.setStyleImage(styleId, styleImageFile);
@@ -185,6 +310,7 @@ export default function DashboardPage() {
       content: `确定要下架「${s.name}」吗？下架后用户将无法看到该款式。`,
       okText: '确认下架',
       cancelText: '取消',
+      maskClosable: true,
       okType: 'danger',
       onOk: async () => {
         try {
@@ -206,7 +332,6 @@ export default function DashboardPage() {
     return false;
   };
 
-  /* ──────── 图片预览辅助 ──────── */
   const clearImagePreview = () => {
     setStyleImageFile(null);
     setStyleImagePreview('');
@@ -229,6 +354,7 @@ export default function DashboardPage() {
       content: `确定将该预约标记为「${label}」吗？`,
       okText: '确定',
       cancelText: '取消',
+      maskClosable: true,
       onOk: async () => {
         try {
           await adminAPI.updateAppointment(id, newStatus);
@@ -377,104 +503,212 @@ export default function DashboardPage() {
   /* ═══════════════════════════ 渲染 ═══════════════════════════ */
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto' }}>
-      <h2 style={{ color: '#5a7a52', marginBottom: 20, fontSize: 22, fontWeight: 700 }}>商家后台</h2>
+      <h2 style={{ color: '#222', marginBottom: 20, fontSize: 22, fontWeight: 700 }}>商家后台</h2>
 
       <Tabs
         size="large"
-        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #e8ede6', marginBottom: 16 }}
+        tabBarStyle={{ background: '#fff', borderRadius: 12, padding: '4px 16px 0', border: '1px solid #F0F0F0', marginBottom: 16 }}
         items={[
-          /* ════ Tab: 数据概览 ════ */
+          /* ════ Tab: 数据概览（左数据右对话） ════ */
           {
             key: 'overview',
             label: '📊 数据概览',
             children: (
-              <div>
-                <Row gutter={[16, 16]}>
-                  <Col xs={12} sm={6}><Card><Statistic title="总预约" value={overview.total_appointments || 0} prefix={<CalendarOutlined />} /></Card></Col>
-                  <Col xs={12} sm={6}><Card><Statistic title="待确认" value={overview.pending_appointments || 0} valueStyle={{ color: '#faad14' }} /></Card></Col>
-                  <Col xs={12} sm={6}><Card><Statistic title="已完成" value={overview.completed_appointments || 0} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-                  <Col xs={12} sm={6}><Card><Statistic title="总营收" value={overview.total_revenue || 0} prefix="¥" precision={2} /></Card></Col>
-                </Row>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {/* ── 左侧：数据面板 ── */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12} sm={6}><Card><Statistic title="总预约" value={overview.total_appointments || 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#E8708D' }} /></Card></Col>
+                    <Col xs={12} sm={6}><Card><Statistic title="待确认" value={overview.pending_appointments || 0} valueStyle={{ color: '#faad14' }} /></Card></Col>
+                    <Col xs={12} sm={6}><Card><Statistic title="已完成" value={overview.completed_appointments || 0} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+                    <Col xs={12} sm={6}><Card><Statistic title="总营收" value={overview.total_revenue || 0} prefix="¥" precision={2} valueStyle={{ color: '#E8708D' }} /></Card></Col>
+                  </Row>
 
-                {overview.top_styles?.length > 0 && (
-                  <Card title="🔥 热门款式 TOP5" size="small" style={{ marginTop: 16, borderRadius: 12 }}>
-                    <Table
-                      dataSource={overview.top_styles}
-                      rowKey="style_name"
-                      pagination={false}
-                      columns={[
-                        { title: '款式', dataIndex: 'style_name' },
-                        { title: '预约数', dataIndex: 'appointment_count' },
-                        { title: '营收', dataIndex: 'revenue', render: (v: number) => `¥${v.toFixed(2)}` },
-                      ]}
-                    />
-                  </Card>
-                )}
+                  {overview.top_styles?.length > 0 && (
+                    <Card
+                      title={<span><FireOutlined style={{ color: '#E8708D', marginRight: 6 }} />热门款式 TOP5</span>}
+                      size="small"
+                      style={{ marginTop: 16, borderRadius: 12 }}
+                    >
+                      <Table
+                        dataSource={overview.top_styles}
+                        rowKey="style_name"
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          { title: '排名', width: 60, render: (_: any, __: any, i: number) => (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: 24, height: 24, borderRadius: '50%',
+                              background: i < 3 ? '#E8708D' : '#f0f0f0',
+                              color: i < 3 ? '#fff' : '#666',
+                              fontSize: 12, fontWeight: 600,
+                            }}>{i + 1}</span>
+                          )},
+                          { title: '款式', dataIndex: 'style_name' },
+                          { title: '预约数', dataIndex: 'appointment_count', render: (v: number) => <span style={{ color: '#E8708D', fontWeight: 600 }}>{v}</span> },
+                          { title: '营收', dataIndex: 'revenue', render: (v: number) => `¥${v.toFixed(2)}` },
+                        ]}
+                      />
+                    </Card>
+                  )}
+                </div>
 
-                {/* 运营助手AI对话 */}
-                <Card
-                  title={<span><RobotOutlined style={{ marginRight: 6, color: '#7d9d7a' }} />运营助手 · AI分析师</span>}
-                  size="small"
-                  style={{ marginTop: 16, borderRadius: 12 }}
-                  styles={{ body: { padding: 0 } }}
-                >
-                  <div ref={opsChatRef} style={{
-                    height: 280, overflow: 'auto', padding: '12px 16px',
-                    background: '#fafafa',
-                  }}>
-                    {opsMessages.length === 0 && (
-                      <div style={{ textAlign: 'center', marginTop: 80, color: '#bbb', fontSize: 13 }}>
-                        <RobotOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-                        <div>问我今天的运营数据、热门款式、营收趋势...</div>
-                        <div style={{ marginTop: 4, color: '#ccc', fontSize: 12 }}>例如："今天数据怎么样？""最近什么款式最火？"</div>
-                      </div>
-                    )}
-                    {opsMessages.map((m, i) => (
-                      <div key={i} style={{
-                        marginBottom: 12, display: 'flex', gap: 8,
-                        flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
-                      }}>
-                        <Avatar icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                          size={28}
-                          style={{
-                            backgroundColor: m.role === 'user' ? '#7d9d7a' : '#5a7a5a',
-                            flexShrink: 0,
-                          }} />
-                        <div style={{
-                          background: m.role === 'user' ? '#7d9d7a' : '#fff',
-                          color: m.role === 'user' ? '#fff' : '#333',
-                          padding: '8px 14px', borderRadius: 10,
-                          maxWidth: '80%', fontSize: 13, lineHeight: 1.6,
-                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                        }}>
-                          {m.content}
+                {/* ── 右侧：运营助手AI对话 ── */}
+                <div style={{ width: '50%', flexShrink: 0, display: 'flex' }}>
+                  <Card
+                    title={(
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span><RobotOutlined style={{ marginRight: 6, color: '#E8708D' }} />运营助手 · AI分析师</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <Button size="small" type="link" icon={<PlusOutlined />} onClick={newOpsChat}>新对话</Button>
+                          <Button size="small" type="link" onClick={() => setOpsSidebarOpen(!opsSidebarOpen)}>
+                            {opsSidebarOpen ? '收起' : '历史'}
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                    {opsLoading && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Avatar icon={<RobotOutlined />} size={28} style={{ backgroundColor: '#5a7a5a' }} />
-                        <Spin size="small" />
+                    )}
+                    size="small"
+                    style={{ borderRadius: 12, flex: 1, display: 'flex', flexDirection: 'column' }}
+                    styles={{ body: { padding: 0, flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' } }}
+                  >
+                    {/* 历史会话侧栏 */}
+                    {opsSidebarOpen && (
+                      <div style={{
+                        width: 160, borderRight: '1px solid #F0F0F0', background: '#FAFAFA',
+                        overflow: 'auto', padding: '6px 4px',
+                      }}>
+                        {opsSessions.map((s: any) => (
+                          <div key={s.session_key}
+                            onClick={() => setOpsActiveKey(s.session_key)}
+                            style={{
+                              cursor: 'pointer', borderRadius: 6, padding: '6px 8px', marginBottom: 2,
+                              background: s.session_key === opsActiveKey ? '#FDF5F7' : 'transparent',
+                              color: s.session_key === opsActiveKey ? '#E8708D' : '#666',
+                              fontSize: 12, transition: 'all .15s',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                              {s.title || '新对话'}
+                            </span>
+                            <DeleteOutlined style={{ fontSize: 10, color: '#ccc', marginLeft: 4, flexShrink: 0 }}
+                              onClick={(e) => { e.stopPropagation(); deleteOpsSession(s.session_key); }} />
+                          </div>
+                        ))}
+                        {opsSessions.length === 0 && (
+                          <div style={{ textAlign: 'center', color: '#ccc', fontSize: 11, marginTop: 20 }}>暂无历史</div>
+                        )}
                       </div>
                     )}
-                  </div>
-                  <div style={{
-                    padding: '10px 14px', borderTop: '1px solid #f0f0f0',
-                    display: 'flex', gap: 8, alignItems: 'flex-end',
-                  }}>
-                    <Input.TextArea
-                      value={opsInput}
-                      onChange={e => setOpsInput(e.target.value)}
-                      onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); onOpsSend(); } }}
-                      placeholder="问运营数据..."
-                      autoSize={{ minRows: 1, maxRows: 3 }}
-                      style={{ borderRadius: 8, fontSize: 13 }}
-                    />
-                    <Button type="primary" icon={<SendOutlined />} onClick={onOpsSend}
-                      loading={opsLoading} style={{ borderRadius: 8 }}>发送</Button>
-                  </div>
-                </Card>
+                    {/* 消息区域 */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div ref={opsChatRef} style={{
+                        flex: 1, minHeight: 300, maxHeight: 500,
+                        overflow: 'auto', padding: '12px 16px',
+                        background: '#FAFAFA',
+                      }}>
+                        {allOpsMessages.length === 0 && (
+                          <div style={{ textAlign: 'center', marginTop: 60, color: '#bbb', fontSize: 13 }}>
+                            <div className="morphing-blob" style={{ width: 60, height: 60, margin: '0 auto 16px' }} />
+                            <div style={{ color: '#999', fontWeight: 500, marginBottom: 8 }}>运营AI助手</div>
+                            <div>问我运营数据、热门款式、营收趋势...</div>
+                            {/* 预设提问 */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16, alignItems: 'center' }}>
+                              {OPS_SUGGESTIONS.map((s, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setOpsInput(''); opsSend(s); }}
+                                  style={{
+                                    padding: '6px 16px', borderRadius: 16,
+                                    border: '1px solid #eee', background: '#fff',
+                                    color: '#E8708D', fontSize: 12, cursor: 'pointer',
+                                    transition: 'all .2s',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = '#f8f8f8'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {allOpsMessages.map((m, i) => (
+                          <div key={i} style={{
+                            marginBottom: 12, display: 'flex', gap: 8,
+                            flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                          }}>
+                            <Avatar icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                              size={28}
+                              style={{
+                                backgroundColor: m.role === 'user' ? '#E8E8E8' : '#eee',
+                                color: m.role === 'user' ? '#555' : '#E8708D',
+                                flexShrink: 0,
+                              }} />
+                            <div style={{ maxWidth: '80%' }}>
+                              {/* 工具调用展示 */}
+                              {m.tool_calls && renderOpsToolCall(m.tool_calls)}
+                              {/* 消息内容 */}
+                              <div style={{
+                                background: m.role === 'user' ? '#e8e8e8' : '#fff',
+                                color: m.role === 'user' ? '#222' : '#333',
+                                padding: '8px 14px', borderRadius: 10,
+                                fontSize: 13, lineHeight: 1.6,
+                                border: m.role === 'assistant' ? '1px solid #F0F0F0' : 'none',
+                              }}>
+                                {m.role === 'user' ? m.content : renderOpsContent(m.content)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {opsLoading && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Avatar icon={<RobotOutlined />} size={28} style={{ backgroundColor: '#eee', color: '#E8708D' }} />
+                            <Spin indicator={<LoadingOutlined style={{ color: '#E8708D' }} spin />} size="small" />
+                            <span style={{ fontSize: 12, color: '#E8708D' }}>分析中...</span>
+                          </div>
+                        )}
+                      </div>
+                    {/* 输入框 + 预设提问 */}
+                    {!opsLoading && allOpsMessages.length > 0 && allOpsMessages.length <= 2 && (
+                      <div style={{
+                        display: 'flex', gap: 6, padding: '8px 14px 0',
+                        flexWrap: 'wrap',
+                      }}>
+                        {OPS_SUGGESTIONS.slice(0, 3).map((s, i) => (
+                          <button
+                            key={i}
+                            onClick={() => { setOpsInput(''); opsSend(s); }}
+                            style={{
+                              padding: '3px 10px', borderRadius: 12,
+                              border: '1px solid #eee', background: '#fff',
+                              color: '#E8708D', fontSize: 11, cursor: 'pointer',
+                            }}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{
+                      padding: '10px 14px', borderTop: '1px solid #f0f0f0',
+                      display: 'flex', gap: 8, alignItems: 'flex-end',
+                    }}>
+                      <Input.TextArea
+                        value={opsInput}
+                        onChange={e => setOpsInput(e.target.value)}
+                        onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); onOpsSend(); } }}
+                        placeholder="问运营数据..."
+                        autoSize={{ minRows: 1, maxRows: 3 }}
+                        style={{ borderRadius: 8, fontSize: 13, borderColor: '#eee' }}
+                      />
+                      <Button type="primary" icon={<SendOutlined />} onClick={onOpsSend}
+                        loading={opsLoading} style={{ borderRadius: 8 }}>发送</Button>
+                    </div>
+                    </div>{/* 关闭消息+输入区容器 */}
+                  </Card>
+                </div>
               </div>
             ),
           },
@@ -482,7 +716,7 @@ export default function DashboardPage() {
           /* ════ Tab: 美甲款式管理 ════ */
           {
             key: 'styles',
-            label: '💅 美甲款式管理',
+            label: '美甲款式管理',
             children: (
               <div>
                 <div style={{ marginBottom: 16 }}>
@@ -522,7 +756,7 @@ export default function DashboardPage() {
                       <Button key={String(f.key)}
                         type={isActive ? 'primary' : 'default'}
                         onClick={() => loadAppts(f.key)}
-                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#e8ede6' }}
+                        style={{ marginRight: 8, borderRadius: 20, borderColor: isActive ? undefined : '#F0F0F0' }}
                       >
                         {f.label}
                       </Button>
@@ -545,7 +779,7 @@ export default function DashboardPage() {
           /* ════ Tab: 时段管理 ════ */
           {
             key: 'slots',
-            label: '🕐 时段管理',
+            label: '时段管理',
             children: (
               <div>
                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -578,7 +812,7 @@ export default function DashboardPage() {
                       },
                       {
                         title: '每时段最大预约数', dataIndex: 'max_bookings', width: 160, align: 'center' as const,
-                        render: (v: number) => <strong style={{ color: '#7d9d7a' }}>{v || '-'}</strong>,
+                        render: (v: number) => <strong style={{ color: '#E8708D' }}>{v || '-'}</strong>,
                       },
                       {
                         title: '操作', width: 120,
@@ -612,6 +846,7 @@ export default function DashboardPage() {
         confirmLoading={styleSubmitting}
         okText="保存"
         cancelText="取消"
+        maskClosable
         width={520}
         destroyOnHidden
       >
@@ -713,6 +948,7 @@ export default function DashboardPage() {
         onOk={onSubmitSlot}
         okText="确定"
         cancelText="取消"
+        maskClosable
         width={400}
         destroyOnHidden
       >

@@ -28,15 +28,22 @@ if str(ROOT) not in sys.path:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """启动时初始化数据库"""
+    """启动时初始化数据库和 WebSocket 连接"""
     logger.info(f"[{settings.APP_NAME}] 正在启动...")
     try:
         await init_db()
         logger.info("数据库表初始化完成")
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
+
+    # 初始化 OpenClaw Gateway WebSocket 连接
+    from app.services.gateway_client import gateway_startup, gateway_shutdown
+    await gateway_startup()
+
     yield
+
     logger.info(f"[{settings.APP_NAME}] 正在关闭...")
+    await gateway_shutdown()
 
 
 app = FastAPI(
@@ -78,7 +85,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # 路由注册
 # ============================================================
 from app.api import auth, styles, posts, merchants, appointments
-from app.api import chat, tryon_api, favorites, search, dashboard, admin, image_api
+from app.api import chat, tryon_api, favorites, search, dashboard, admin, image_api, ws_chat
 
 app.include_router(auth.router, prefix=settings.API_PREFIX, tags=["认证"])
 app.include_router(styles.router, prefix=settings.API_PREFIX, tags=["美甲款式"])
@@ -86,6 +93,7 @@ app.include_router(posts.router, prefix=settings.API_PREFIX, tags=["帖子社区
 app.include_router(merchants.router, prefix=settings.API_PREFIX, tags=["商家"])
 app.include_router(appointments.router, prefix=settings.API_PREFIX, tags=["预约"])
 app.include_router(chat.router, prefix=settings.API_PREFIX, tags=["AI对话"])
+app.include_router(ws_chat.router, tags=["AI对话-WebSocket"])
 app.include_router(tryon_api.router, prefix=settings.API_PREFIX, tags=["AI试戴"])
 app.include_router(favorites.router, prefix=settings.API_PREFIX, tags=["收藏"])
 app.include_router(search.router, prefix=settings.API_PREFIX, tags=["搜索"])

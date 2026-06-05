@@ -8,6 +8,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8190',
       '/static': 'http://localhost:8190',
+      '/ws': {
+        target: 'ws://localhost:8190',
+        ws: true,
+      },
     },
   },
 })

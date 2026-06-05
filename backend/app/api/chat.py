@@ -1,5 +1,5 @@
 """
-小美对话 API — React范式工具调用（思考→工具调用→结果→再思考→最终回答）
+小美对话 API — HTTP 端点（历史会话、管理）+ WebSocket 端点见 ws_chat.py
 """
 import json
 import uuid
@@ -328,7 +328,7 @@ async def chat_user_stream(
 
             for round_num in range(1, MAX_REACT_ROUNDS + 1):
                 # 发请求（非流式获取完整响应，因为需要tool_calls）
-                resp_data = await _call_model(current_messages, tools)
+                resp_data = await _call_model(current_messages, tools, agent_type)
 
                 if "error" in resp_data:
                     full_content = resp_data["error"]
@@ -502,7 +502,7 @@ async def _react_loop(messages: list, agent_type: str, db: AsyncSession) -> dict
     for round_num in range(1, MAX_REACT_ROUNDS + 1):
         logger.info(f"[chat-react] round={round_num} agent={agent_type}")
 
-        resp_data = await _call_model(current_messages, tools)
+        resp_data = await _call_model(current_messages, tools, agent_type)
 
         if "error" in resp_data:
             final_content = resp_data["error"]
@@ -568,16 +568,16 @@ async def _react_loop(messages: list, agent_type: str, db: AsyncSession) -> dict
     }
 
 
-async def _call_model(messages: list, tools: list) -> dict:
-    """调用OpenClaw Gateway模型（启用MiMo思考模式）"""
+async def _call_model(messages: list, tools: list, agent_type: str = "user") -> dict:
+    """通过 OpenClaw Gateway HTTP 调用 AI 模型"""
+    model = "openclaw/nailvista-xiaomei" if agent_type == "user" else "openclaw/nailvista-ops"
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             payload = {
-                "model": "xiaomi-coding/mimo-v2.5-pro",
+                "model": model,
                 "messages": messages,
                 "tools": tools,
                 "tool_choice": "auto",
-                "thinking": {"type": "enabled"},
                 "temperature": 0.7,
                 "max_tokens": 4096,
             }

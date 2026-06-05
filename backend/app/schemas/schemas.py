@@ -2,7 +2,7 @@
 Pydantic 请求/响应 Schema 定义
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 
 
@@ -190,8 +190,8 @@ class ChatMessageOut(BaseModel):
     id: int
     role: str
     content: str
-    tool_calls: Optional[dict] = None
-    thinking: Optional[str] = None
+    tool_calls: Optional[Any] = None
+    thinking: Optional[Any] = None
     created_at: datetime
 
     class Config:
