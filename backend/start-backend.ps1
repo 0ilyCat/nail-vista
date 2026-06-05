@@ -24,5 +24,5 @@ else {
 }
 
 # 2. 启动 uvicorn 服务
-Write-Host "`n正在启动服务：cd backend && D:/anaconda3/envs/nail/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload`n" -ForegroundColor Cyan
-cd backend && D:/anaconda3/envs/nail/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload
+Write-Host "`n正在启动服务：D:/anaconda3/envs/nail/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload`n" -ForegroundColor Cyan
+D:/anaconda3/envs/nail/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload

@@ -365,12 +365,15 @@ async def chat_user_stream(
                         tool_trace.append(result_event)
                         yield f"data: {json.dumps(result_event)}\n\n"
 
-                        # 添加助手消息和工具结果到对话
-                        current_messages.append({
+                        # 添加助手消息和工具结果到对话（保留reasoning_content）
+                        assistant_entry = {
                             "role": "assistant",
                             "content": content or "",
                             "tool_calls": [tc],
-                        })
+                        }
+                        if msg.get("reasoning_content"):
+                            assistant_entry["reasoning_content"] = msg["reasoning_content"]
+                        current_messages.append(assistant_entry)
                         current_messages.append({
                             "role": "tool",
                             "tool_call_id": tc.get("id", f"call_{round_num}"),
@@ -517,12 +520,14 @@ async def _react_loop(messages: list, agent_type: str, db: AsyncSession) -> dict
             })
 
         if tool_calls:
-            # 有工具调用
+            # 有工具调用 — 保留reasoning_content以满足MiMo要求
             assistant_msg_entry = {
                 "role": "assistant",
                 "content": content or "",
                 "tool_calls": tool_calls,
             }
+            if msg.get("reasoning_content"):
+                assistant_msg_entry["reasoning_content"] = msg["reasoning_content"]
             current_messages.append(assistant_msg_entry)
 
             for tc in tool_calls:
@@ -564,14 +569,15 @@ async def _react_loop(messages: list, agent_type: str, db: AsyncSession) -> dict
 
 
 async def _call_model(messages: list, tools: list) -> dict:
-    """调用OpenClaw Gateway模型（支持工具调用）"""
+    """调用OpenClaw Gateway模型（启用MiMo思考模式）"""
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             payload = {
                 "model": "xiaomi-coding/mimo-v2.5-pro",
                 "messages": messages,
                 "tools": tools,
                 "tool_choice": "auto",
+                "thinking": {"type": "enabled"},
                 "temperature": 0.7,
                 "max_tokens": 4096,
             }
@@ -585,9 +591,11 @@ async def _call_model(messages: list, tools: list) -> dict:
             )
             if resp.status_code == 200:
                 data = resp.json()
+                msg = data['choices'][0].get('message', {})
                 logger.info(f"[chat-model] response | finish_reason={data['choices'][0].get('finish_reason','?')} "
-                           f"has_tool_calls={bool(data['choices'][0].get('message',{}).get('tool_calls'))} "
-                           f"content_len={len(data['choices'][0].get('message',{}).get('content','') or '')}")
+                           f"has_tool_calls={bool(msg.get('tool_calls'))} "
+                           f"has_reasoning={bool(msg.get('reasoning_content'))} "
+                           f"content_len={len(msg.get('content','') or '')}")
                 return data
             else:
                 logger.error(f"[chat-model] 请求失败 | status={resp.status_code} body={resp.text[:300]}")
