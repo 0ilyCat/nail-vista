@@ -2,7 +2,7 @@
  * 灵感广场 — 小红书风格卡片 + Modal 帖子详情 + 发布弹窗
  */
 import { useEffect, useState } from 'react';
-import { Row, Col, Button, Input, Spin, message, Modal, Tag, Typography, Upload } from 'antd';
+import { Row, Col, Button, Input, Spin, message, Modal, Tag, Typography, Upload, Avatar } from 'antd';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   HeartOutlined, HeartFilled, CloseOutlined, UserOutlined,
@@ -171,9 +171,12 @@ export default function CommunityPage() {
         <div style={{ fontSize: 14, color: '#333', lineHeight: 1.4, marginBottom: 8 }}>{p.title}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#FDF5F7',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, color: '#E8708D', flexShrink: 0, fontWeight: 600 }}>{p.author_name?.[0] || <UserOutlined />}</div>
+            <Avatar
+              src={p.author_avatar ? imgUrl(p.author_avatar) : undefined}
+              icon={<UserOutlined />}
+              size={22}
+              style={{ backgroundColor: '#e0e0e0', color: '#999', flexShrink: 0 }}
+            />
             <span style={{ fontSize: 12, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.author_name || '匿名用户'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -347,9 +350,12 @@ export default function CommunityPage() {
             <div style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FDF5F7',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, fontWeight: 700, color: '#E8708D' }}>{detailPost.author_name?.[0] || <UserOutlined />}</div>
+                  <Avatar
+                    src={detailPost.author_avatar ? imgUrl(detailPost.author_avatar) : undefined}
+                    icon={<UserOutlined />}
+                    size={40}
+                    style={{ backgroundColor: '#e0e0e0', color: '#999', flexShrink: 0 }}
+                  />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15, color: '#333' }}>{detailPost.author_name || '匿名用户'}</div>
                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 2 }}>{detailPost.created_at ? new Date(detailPost.created_at).toLocaleDateString('zh-CN') : ''}</div>

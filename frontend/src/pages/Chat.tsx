@@ -71,7 +71,7 @@ export default function ChatPage() {
   }, []);
 
   const loadSessions = () => {
-    chatAPI.getSessions().then(r => {
+    chatAPI.getSessions('user').then(r => {
       const list = r.data || [];
       setSessions(list);
       if (!activeKey && list.length > 0) setActiveKey(list[0].session_key);
