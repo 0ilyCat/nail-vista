@@ -21,6 +21,10 @@ interface GlobalState {
   error: string | null;
   toolCalls: ToolCallEntry[];
   listeners: Set<() => void>;
+  ws: WebSocket | null;
+  stream: StreamState;
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
+  minLoadingTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const globalStates = new Map<string, GlobalState>();
@@ -34,6 +38,16 @@ function getGlobal(agentType: string): GlobalState {
       error: null,
       toolCalls: [],
       listeners: new Set(),
+      ws: null,
+      stream: {
+        loading: false,
+        streamingContent: '',
+        toolCalls: [],
+        done: false,
+        hasAssistantMsg: false,
+      },
+      reconnectTimer: null,
+      minLoadingTimer: null,
     });
   }
   return globalStates.get(agentType)!;
@@ -79,18 +93,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
     return () => { state.listeners.delete(listener); };
   }, [state]);
 
-  const streamRef = useRef<StreamState>({
-    loading: false,
-    streamingContent: '',
-    toolCalls: [],
-    done: false,
-    hasAssistantMsg: false,
-  });
-
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionKeyRef = useRef<string | null>(state.sessionKey);
-  const minLoadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getToken = useCallback(() => localStorage.getItem('token') || '', []);
 
@@ -99,7 +102,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       const token = getToken();
       if (!token) { reject(new Error('未登录')); return; }
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
+      if (state.ws?.readyState === WebSocket.OPEN) {
         resolve();
         return;
       }
@@ -112,7 +115,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
       ws.onopen = () => {
         console.log('[useChatWS] 已连接');
-        wsRef.current = ws;
+        state.ws = ws;
         state.error = null;
         notify(state);
         if (!settled) { settled = true; resolve(); }
@@ -136,10 +139,10 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
       ws.onclose = () => {
         console.log('[useChatWS] 连接关闭');
-        wsRef.current = null;
+        state.ws = null;
         if (!settled) { settled = true; reject(new Error('WebSocket连接已关闭')); }
-        if (!streamRef.current.done) {
-          reconnectTimerRef.current = setTimeout(() => {
+        if (!state.stream.done) {
+          state.reconnectTimer = setTimeout(() => {
             console.log('[useChatWS] 尝试重连...');
             connect().catch(() => {});
           }, 3000);
@@ -149,31 +152,29 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   }, [agentType, getToken]);
 
   const disconnect = useCallback(() => {
-    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
+    if (state.ws) {
+      state.ws.close();
+      state.ws = null;
     }
   }, []);
 
-  useEffect(() => {
-    return () => disconnect();
-  }, [disconnect]);
+  // 不自动 disconnect — 由消费者决定何时断开（页面切换时保持连接）
 
   /** 确保 loading 至少显示 minMs 毫秒，避免一闪而过 */
   const stopLoadingMin = useCallback((minMs: number = 600) => {
-    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
-    minLoadingTimerRef.current = setTimeout(() => {
+    if (state.minLoadingTimer) clearTimeout(state.minLoadingTimer);
+    state.minLoadingTimer = setTimeout(() => {
       state.loading = false;
-      streamRef.current.loading = false;
-      minLoadingTimerRef.current = null;
+      state.stream.loading = false;
+      state.minLoadingTimer = null;
       notify(state);
     }, minMs);
   }, []);
 
   const handleEvent = useCallback((data: any) => {
     const type = data.type;
-    const stream = streamRef.current;
+    const stream = state.stream;
 
     switch (type) {
       case 'session':
@@ -281,9 +282,9 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       case 'status':
         if (data.status === 'running') {
           state.loading = true;
-          streamRef.current.loading = true;
+          state.stream.loading = true;
         } else if (data.status === 'done') {
-          streamRef.current.done = true;
+          state.stream.done = true;
           stopLoadingMin(500);
         } else if (data.status === 'error') {
           state.error = data.message || '执行异常';
@@ -293,7 +294,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
         break;
 
       case 'done':
-        streamRef.current.done = true;
+        state.stream.done = true;
         stopLoadingMin(500);
         break;
 
@@ -313,7 +314,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const send = useCallback(async (userMessage: string) => {
     if (!userMessage.trim()) return;
 
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
       try {
         await connect();
       } catch (e) {
@@ -322,7 +323,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       }
     }
 
-    streamRef.current = {
+    state.stream = {
       loading: true,
       streamingContent: '',
       toolCalls: [],
@@ -334,22 +335,22 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
     state.messages = [...state.messages, { role: 'user', content: userMessage }];
     notify(state);
 
-    wsRef.current!.send(JSON.stringify({
+    state.ws!.send(JSON.stringify({
       type: 'user_message',
       text: userMessage,
       session_key: sessionKeyRef.current || undefined,
     }));
   }, [connect]);
 
-  const toolCalls = streamRef.current.toolCalls;
+  const toolCalls = state.stream.toolCalls;
 
   const clearMessages = useCallback(() => {
-    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
+    if (state.minLoadingTimer) clearTimeout(state.minLoadingTimer);
     state.messages = [];
     state.toolCalls = [];
     sessionKeyRef.current = null;
     state.sessionKey = null;
-    streamRef.current = {
+    state.stream = {
       loading: false,
       streamingContent: '',
       toolCalls: [],
