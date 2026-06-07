@@ -88,6 +88,11 @@ a {
 .nv-search {
   width: min(300px, 24vw);
   align-self: center;
+  /* 修复搜索框在 header 中垂直居中 */
+  vertical-align: middle;
+}
+.nv-search .ant-input-wrapper {
+  vertical-align: middle;
 }
 
 .nv-search .ant-input-affix-wrapper,

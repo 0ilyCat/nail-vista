@@ -82,6 +82,11 @@ function notify(state: GlobalState) {
   state.listeners.forEach(fn => fn());
 }
 
+function tryParse(v: any): any {
+  if (typeof v !== 'string') return v;
+  try { return JSON.parse(v); } catch { return v; }
+}
+
 export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const [, forceUpdate] = useState(0);
   const state = getGlobal(agentType);
@@ -257,15 +262,18 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       case 'tool_result':
       case 'tool_result_local':
       case 'tool_output': {
+        // 后端可能发送 JSON 字符串，需要解析
+        const rawOutput = data.output || data.result;
+        const parsed = typeof rawOutput === 'string' ? tryParse(rawOutput) : rawOutput;
         if (data.call_id) {
           const idx = stream.toolCalls.findIndex(t => t.call_id === data.call_id);
           if (idx >= 0) {
-            stream.toolCalls[idx] = { ...stream.toolCalls[idx], result: data.output || data.result || {}, error: data.error };
+            stream.toolCalls[idx] = { ...stream.toolCalls[idx], result: parsed || {}, error: data.error };
           }
         } else if (data.name) {
           for (let i = stream.toolCalls.length - 1; i >= 0; i--) {
             if (stream.toolCalls[i].name === data.name && !stream.toolCalls[i].result) {
-              stream.toolCalls[i] = { ...stream.toolCalls[i], result: data.output || data.result || {}, error: data.error };
+              stream.toolCalls[i] = { ...stream.toolCalls[i], result: parsed || {}, error: data.error };
               break;
             }
           }
