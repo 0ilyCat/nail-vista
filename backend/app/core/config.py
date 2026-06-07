@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     OPENCLAW_GATEWAY_TOKEN: str = "nailvista-dev-token"
 
     # Gateway WebSocket 閲嶈繛涓庤秴鏃堕厤缃?
-    OPENCLAW_WS_RECONNECT_DELAY: int = 3        # 鏂嚎閲嶈繛闂撮殧(绉?
-    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 5  # 鏈€澶ч噸杩炴鏁?
+    OPENCLAW_WS_RECONNECT_DELAY: int = 5        # 断线重连间隔(秒)
+    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 12 # 最大重连次数(12×5s=60s)
     OPENCLAW_WS_REQUEST_TIMEOUT: int = 300       # 鍗曟璇锋眰瓒呮椂(绉?
 
     # 闃块噷鐧剧偧鍥剧敓妯″瀷 (AI璇曟埓)

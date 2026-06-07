@@ -41,8 +41,12 @@ class GatewayConnection:
         base = settings.OPENCLAW_BASE_URL.replace("http://", "ws://").replace("https://", "wss://")
         return base
 
-    async def connect(self) -> None:
-        """建立 WS 连接并完成协议握手"""
+    async def connect(self, max_retries: int = None) -> None:
+        """建立 WS 连接并完成协议握手。
+        
+        Args:
+            max_retries: 最大重试次数，默认使用配置值。设为 0 表示无限重试。
+        """
         async with self._lock:
             if self._ws and self._connected:
                 return
@@ -50,7 +54,10 @@ class GatewayConnection:
             url = self.ws_url
             logger.info(f"[GATEWAY] 连接 | url={url}")
 
-            for attempt in range(settings.OPENCLAW_WS_RECONNECT_MAX_RETRIES):
+            retries = max_retries if max_retries is not None else settings.OPENCLAW_WS_RECONNECT_MAX_RETRIES
+            attempt = 0
+            while retries == 0 or attempt < retries:
+                attempt += 1
                 try:
                     self._ws = await websockets.connect(
                         url,
@@ -62,11 +69,10 @@ class GatewayConnection:
                     break
                 except Exception as e:
                     delay = settings.OPENCLAW_WS_RECONNECT_DELAY
-                    logger.warning(f"[GATEWAY] 连接失败 attempt={attempt + 1} | {type(e).__name__}: {e} | {delay}s后重试")
-                    if attempt < settings.OPENCLAW_WS_RECONNECT_MAX_RETRIES - 1:
-                        await asyncio.sleep(delay)
-                    else:
-                        raise
+                    logger.warning(f"[GATEWAY] 连接失败 attempt={attempt} | {type(e).__name__}: {e} | {delay}s后重试")
+                    await asyncio.sleep(delay)
+            else:
+                raise ConnectionError(f"Gateway 连接失败，已重试 {attempt} 次")
 
             # 等待 connect.challenge（Gateway 握手前置质询）
             raw = await asyncio.wait_for(self._ws.recv(), timeout=10.0)
@@ -142,7 +148,8 @@ class GatewayConnection:
             logger.info("[GATEWAY] 已断开")
 
     async def _ensure_connected(self):
-        if not self._connected:
+        """确保连接可用，断线时自动重连"""
+        if not self._connected or not self._ws:
             await self.connect()
         # 启动接收循环（如果尚未启动）
         if not self._recv_task or self._recv_task.done():
@@ -153,30 +160,38 @@ class GatewayConnection:
     # ═══════════════════════════════════════
 
     async def _call(self, method: str, params: dict = None, timeout: float = 60.0) -> dict:
-        """发送 RPC 请求并等待响应"""
-        await self._ensure_connected()
-        req_id = str(uuid.uuid4())
-        frame = json.dumps({
-            "type": "req",
-            "id": req_id,
-            "method": method,
-            "params": params or {},
-        })
-        fut = asyncio.get_event_loop().create_future()
-        self._pending[req_id] = fut
-        await self._ws.send(frame)
-        logger.debug(f"[GATEWAY-RPC] {method} | id={req_id}")
+        """发送 RPC 请求并等待响应，连接断开时自动重连重试"""
+        max_call_retries = 2
+        for call_attempt in range(max_call_retries):
+            try:
+                await self._ensure_connected()
+                req_id = str(uuid.uuid4())
+                frame = json.dumps({
+                    "type": "req",
+                    "id": req_id,
+                    "method": method,
+                    "params": params or {},
+                })
+                fut = asyncio.get_event_loop().create_future()
+                self._pending[req_id] = fut
+                await self._ws.send(frame)
+                logger.debug(f"[GATEWAY-RPC] {method} | id={req_id}")
 
-        try:
-            result = await asyncio.wait_for(fut, timeout=timeout)
-            return result
-        except asyncio.TimeoutError:
-            logger.error(f"[GATEWAY-RPC] 超时 | method={method} id={req_id}")
-            self._pending.pop(req_id, None)
-            raise
-        except Exception:
-            self._pending.pop(req_id, None)
-            raise
+                result = await asyncio.wait_for(fut, timeout=timeout)
+                return result
+            except (ConnectionError, ConnectionClosed, OSError) as e:
+                logger.warning(f"[GATEWAY-RPC] 连接异常 attempt={call_attempt+1}/{max_call_retries} | {type(e).__name__}: {e}")
+                self._connected = False
+                if call_attempt < max_call_retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    raise
+            except asyncio.TimeoutError:
+                self._pending.pop(req_id, None)
+                raise
+            except Exception:
+                self._pending.pop(req_id, None)
+                raise
 
     async def sessions_create(self) -> dict:
         """创建新会话，返回 sessionKey"""
@@ -286,14 +301,17 @@ class GatewayConnection:
                     await self._dispatch_event(msg)
 
             except ConnectionClosed as e:
-                logger.warning(f"[GATEWAY-RECV] 连接断开 | code={e.code}")
+                logger.warning(f"[GATEWAY-RECV] 连接断开 | code={e.code}，自动重连...")
                 self._connected = False
-                # 等待重连
-                await asyncio.sleep(1)
-                try:
-                    await self.connect()
-                except Exception:
-                    pass
+                # 持续重连直到恢复
+                while self._running:
+                    try:
+                        await self.connect()
+                        logger.info("[GATEWAY-RECV] 重连成功")
+                        break
+                    except Exception as reconnect_err:
+                        logger.warning(f"[GATEWAY-RECV] 重连失败 | {reconnect_err} | 5s后重试")
+                        await asyncio.sleep(5)
             except Exception as e:
                 logger.error(f"[GATEWAY-RECV] 接收异常 | {type(e).__name__}: {e}")
                 await asyncio.sleep(0.1)
@@ -308,13 +326,26 @@ gateway = GatewayConnection()
 # ═══════════════════════════════════════════════════
 
 async def gateway_startup():
-    """应用启动时初始化 Gateway WS 连接"""
-    logger.info("[GATEWAY-LIFECYCLE] 初始化")
-    try:
-        await gateway.connect()
-        logger.info("[GATEWAY-LIFECYCLE] 连接就绪")
-    except Exception as e:
-        logger.error(f"[GATEWAY-LIFECYCLE] 连接失败: {e}")
+    """应用启动时在后台持续重连直到 OpenClaw 就绪（不阻塞服务启动）"""
+    logger.info("[GATEWAY-LIFECYCLE] 初始化（后台重连模式）")
+    asyncio.create_task(_gateway_reconnect_loop())
+
+
+async def _gateway_reconnect_loop():
+    """后台无限重连，直到 Gateway 连接成功"""
+    while True:
+        try:
+            # max_retries=0 → 无限重试
+            await gateway.connect(max_retries=0)
+            logger.info("[GATEWAY-LIFECYCLE] 连接就绪")
+            # 启动接收循环
+            if not gateway._recv_task or gateway._recv_task.done():
+                gateway._recv_task = asyncio.create_task(gateway._recv_loop())
+            return
+        except Exception as e:
+            logger.warning(f"[GATEWAY-LIFECYCLE] 连接失败: {e} | 5s后重试")
+            gateway._connected = False
+            await asyncio.sleep(5)
 
 
 async def gateway_shutdown():

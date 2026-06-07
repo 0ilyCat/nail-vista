@@ -69,7 +69,7 @@
   "gateway": {
     "mode": "local",
     "port": 18789,
-    "bind": "any",
+    "bind": "lan",
     "auth": {
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
