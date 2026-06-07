@@ -6,6 +6,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# 配置国内 Debian 镜像源加速
+RUN sed -i 's|http://deb.debian.org|http://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources
+
 # 安装 MySQL 客户端库（aiomysql 编译依赖）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \

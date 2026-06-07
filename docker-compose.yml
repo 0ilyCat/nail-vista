@@ -3,8 +3,6 @@
 # 服务: MySQL 8.0 + Backend(FastAPI) + Frontend(Nginx) + OpenClaw Gateway
 # 网络: my-network
 # ============================================================
-version: "3.9"
-
 services:
   # ── MySQL 8.0 数据库 ──
   mysql:
