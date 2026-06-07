@@ -161,7 +161,6 @@ export default function ChatPage() {
           const label = TOOL_LABELS[entry.name] || entry.name;
           const resultData = entry.result?.data;
           const summary = entry.error ? '异常'
-            : resultData ? `${Array.isArray(resultData) ? resultData.length : Object.keys(resultData).length} 条数据`
             : hasResult ? '完成' : '执行中...';
 
           return (
@@ -182,7 +181,7 @@ export default function ChatPage() {
               <ToolOutlined style={{ color: '#2f6f68', fontSize: 12 }} />
               <span style={{ color: '#333', fontWeight: 500 }}>{label}</span>
               <span style={{ color: '#999' }}>({summary})</span>
-              {hasResult && isSuccess && resultData && (
+              {hasResult && (
                 <Collapse
                   size="small"
                   ghost
@@ -261,9 +260,9 @@ export default function ChatPage() {
               locale={{ emptyText: '' }}
               renderItem={(s: any) => (
                 <div
-                  onClick={() => setActiveKey(s.session_key)}
+                  onClick={() => { if (!loading) setActiveKey(s.session_key); }}
                   style={{
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                     borderRadius: 8,
                     padding: '10px 12px',
                     marginBottom: 4,
@@ -275,6 +274,7 @@ export default function ChatPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    opacity: loading ? 0.5 : 1,
                   }}
                   onMouseEnter={e => {
                     if (s.session_key !== activeKey) e.currentTarget.style.background = '#f8f8f8';

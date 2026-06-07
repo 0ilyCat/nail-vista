@@ -688,13 +688,14 @@ export default function DashboardPage() {
                 }}>
                   {opsSessions.map((s: any) => (
                     <div key={s.session_key}
-                      onClick={() => setOpsActiveKey(s.session_key)}
+                      onClick={() => { if (!opsLoading) setOpsActiveKey(s.session_key); }}
                       style={{
-                        cursor: 'pointer', borderRadius: 6, padding: '6px 8px', marginBottom: 2,
+                        cursor: opsLoading ? 'not-allowed' : 'pointer', borderRadius: 6, padding: '6px 8px', marginBottom: 2,
                         background: s.session_key === opsActiveKey ? '#f3f8f4' : 'transparent',
                         color: s.session_key === opsActiveKey ? '#2f6f68' : '#666',
                         fontSize: 12, transition: 'all .15s',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        opacity: opsLoading ? 0.5 : 1,
                       }}
                     >
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>

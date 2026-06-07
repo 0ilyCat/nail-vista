@@ -126,7 +126,7 @@ export default function TryOnPage() {
         if (s.selectedHand) setSelectedHand(s.selectedHand);
         if (s.selectedStyle) setSelectedStyle(s.selectedStyle);
         if (s.resultUrl) setResultUrl(s.resultUrl);
-        if (s.wasLoading) setLoading(true); // 保持加载动画（后端仍在生成）
+        if (s.wasLoading) setResultUrl(''); // 切回时清除旧结果，不显示动画
         localStorage.removeItem('tryon_state');
       } catch { /* ignore */ }
     }
@@ -507,7 +507,7 @@ export default function TryOnPage() {
               />
             )}
 
-            {resultUrl && (
+            {resultUrl && !loading && (
               <Image.PreviewGroup>
                 <Image src={resultUrl} alt="试戴效果" style={{ borderRadius: 8, width: '100%' }}
                   fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZkZjJmNCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjQ4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iI2M3Nzk4NiI+8J+SsTwvdGV4dD48L3N2Zz4="
