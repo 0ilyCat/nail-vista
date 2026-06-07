@@ -1,33 +1,34 @@
 """
-NailVista 核心配置
-支持 .env 文件和环境变量注入
+NailVista 鏍稿績閰嶇疆
+鏀寔 .env 鏂囦欢鍜岀幆澧冨彉閲忔敞鍏?
 """
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
-    # 应用
+    # 搴旂敤
     APP_NAME: str = "NailVista"
     DEBUG: bool = True
     API_PREFIX: str = "/api"
 
-    # 数据库 (MySQL)
+    # 鏁版嵁搴?(MySQL)
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
     DB_NAME: str = "nail_vista"
+    DATABASE_URL: Optional[str] = None
 
     # JWT
     JWT_SECRET_KEY: str = "nailvista-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
-    # 文件上传
+    # 鏂囦欢涓婁紶
     STATIC_DIR: str = "static"
     UPLOAD_DIR: str = "static"
     RESULT_DIR: str = "static/results"
@@ -43,20 +44,22 @@ class Settings(BaseSettings):
     OPENCLAW_BASE_URL: str = "http://127.0.0.1:18789"
     OPENCLAW_GATEWAY_TOKEN: str = "nailvista-dev-token"
 
-    # Gateway WebSocket 重连与超时配置
-    OPENCLAW_WS_RECONNECT_DELAY: int = 3        # 断线重连间隔(秒)
-    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 5  # 最大重连次数
-    OPENCLAW_WS_REQUEST_TIMEOUT: int = 300       # 单次请求超时(秒)
+    # Gateway WebSocket 閲嶈繛涓庤秴鏃堕厤缃?
+    OPENCLAW_WS_RECONNECT_DELAY: int = 3        # 鏂嚎閲嶈繛闂撮殧(绉?
+    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 5  # 鏈€澶ч噸杩炴鏁?
+    OPENCLAW_WS_REQUEST_TIMEOUT: int = 300       # 鍗曟璇锋眰瓒呮椂(绉?
 
-    # 阿里百炼图生模型 (AI试戴)
+    # 闃块噷鐧剧偧鍥剧敓妯″瀷 (AI璇曟埓)
     DASHSCOPE_API_KEY: str = ""
 
-    # 本地图片存储 (图片通过 /api/getImg?name= 访问)
-    IMAGE_BASE_URL: str = ""  # 留空，前端使用相对路径 /api/getImg
+    # 鏈湴鍥剧墖瀛樺偍 (鍥剧墖閫氳繃 /api/getImg?name= 璁块棶)
+    IMAGE_BASE_URL: str = ""  # 鐣欑┖锛屽墠绔娇鐢ㄧ浉瀵硅矾寰?/api/getImg
 
     @property
     def database_url(self) -> str:
-        # URL 编码密码，防止特殊字符（如 @ / : #）破坏连接串
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        # URL-encode the password so special characters do not break the MySQL URL.
         encoded_pw = quote_plus(self.DB_PASSWORD)
         return f"mysql+aiomysql://{self.DB_USER}:{encoded_pw}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
@@ -71,3 +74,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

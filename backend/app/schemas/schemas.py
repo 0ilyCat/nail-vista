@@ -1,13 +1,13 @@
 """
-Pydantic 请求/响应 Schema 定义
+Pydantic 璇锋眰/鍝嶅簲 Schema 瀹氫箟
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Any
 from datetime import datetime
 
 
 # ============================================================
-# 认证
+# 璁よ瘉
 # ============================================================
 class UserRegister(BaseModel):
     username: str = Field(..., min_length=3, max_length=64)
@@ -15,9 +15,19 @@ class UserRegister(BaseModel):
     nickname: Optional[str] = ""
     role: Optional[str] = "user"  # user / merchant
 
+    @field_validator("username", "nickname", "role", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
 class UserLogin(BaseModel):
     username: str
     password: str
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def strip_username(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -45,7 +55,7 @@ class UserUpdate(BaseModel):
 
 
 # ============================================================
-# 商家
+# 鍟嗗
 # ============================================================
 class MerchantOut(BaseModel):
     id: int
@@ -71,7 +81,7 @@ class MerchantDetail(MerchantOut):
 
 
 # ============================================================
-# 美甲款式
+# 缇庣敳娆惧紡
 # ============================================================
 class NailStyleOut(BaseModel):
     id: int
@@ -102,13 +112,13 @@ class NailStyleDetail(NailStyleOut):
 
 
 # ============================================================
-# 帖子
+# 甯栧瓙
 # ============================================================
 class PostCreate(BaseModel):
     title: str = Field(..., max_length=256)
     content: Optional[str] = ""
     image_url: Optional[str] = ""
-    images: Optional[List[str]] = []  # 多图：最多3张
+    images: Optional[List[str]] = []  # 澶氬浘锛氭渶澶?寮?
     style_id: Optional[int] = None
 
 class PostOut(BaseModel):
@@ -138,7 +148,7 @@ class PostDetail(PostOut):
 
 
 # ============================================================
-# 预约
+# 棰勭害
 # ============================================================
 class AppointmentCreate(BaseModel):
     merchant_id: int
@@ -168,7 +178,7 @@ class AppointmentOut(BaseModel):
 
 
 # ============================================================
-# AI聊天
+# AI鑱婂ぉ
 # ============================================================
 class ChatRequest(BaseModel):
     message: str
@@ -199,7 +209,7 @@ class ChatMessageOut(BaseModel):
 
 
 # ============================================================
-# 试戴
+# 璇曟埓
 # ============================================================
 class TryonRequest(BaseModel):
     hand_image_id: int
@@ -231,7 +241,7 @@ class HandImageOut(BaseModel):
 
 
 # ============================================================
-# 商家仪表盘
+# 鍟嗗浠〃鐩?
 # ============================================================
 class DashboardOverview(BaseModel):
     total_appointments: int = 0
@@ -244,7 +254,7 @@ class DashboardOverview(BaseModel):
 
 
 # ============================================================
-# 搜索
+# 鎼滅储
 # ============================================================
 class SearchResult(BaseModel):
     styles: List[NailStyleOut] = []
@@ -253,7 +263,7 @@ class SearchResult(BaseModel):
 
 
 # ============================================================
-# 分页
+# 鍒嗛〉
 # ============================================================
 class PaginatedResponse(BaseModel):
     items: List
@@ -261,3 +271,4 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+

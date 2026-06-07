@@ -112,7 +112,7 @@ export default function MerchantJoinPage() {
               {images.map((img, idx) => (
                 <div key={idx} style={{
                   position: 'relative', width: 120, height: 120, borderRadius: 8,
-                  overflow: 'hidden', border: '1px solid #F0F0F0',
+                  overflow: 'hidden', border: '1px solid #d8e8df',
                 }}>
                   <Image
                     src={imgUrl(img)}
@@ -141,10 +141,10 @@ export default function MerchantJoinPage() {
                   accept="image/*"
                 >
                   <div style={{
-                    width: 120, height: 120, border: '2px dashed #F0F0F0', borderRadius: 8,
+                    width: 120, height: 120, border: '2px dashed #d8e8df', borderRadius: 8,
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center',                     cursor: 'pointer', color: '#E8708D',
-                    background: '#FDF5F7', transition: 'all .2s',
+                    justifyContent: 'center', cursor: 'pointer', color: '#2f6f68',
+                    background: '#f3f8f4', transition: 'all .2s',
                   }}>
                     {uploading ? (
                       <span style={{ fontSize: 13 }}>上传中...</span>
@@ -159,7 +159,7 @@ export default function MerchantJoinPage() {
               )}
             </div>
             {images.length > 0 && (
-              <span style={{ fontSize: 12, color: '#222' }}>已选择 {images.length}/3 张</span>
+              <span style={{ fontSize: 12, color: '#2f4541' }}>已选择 {images.length}/3 张</span>
             )}
           </Form.Item>
 
@@ -184,3 +184,4 @@ export default function MerchantJoinPage() {
     </div>
   );
 }
+

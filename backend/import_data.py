@@ -6,6 +6,7 @@ sys.path.insert(0, ".")
 
 import asyncio
 from datetime import datetime, timezone
+from sqlalchemy import select
 from app.core.database import async_session_factory, init_db, engine, Base
 from app.core.security import hash_password
 from app.models.models import (

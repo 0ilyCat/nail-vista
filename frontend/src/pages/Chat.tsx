@@ -167,9 +167,9 @@ export default function ChatPage() {
                   {isSuccess ? '完成' : '异常'}
                 </Tag>
               ) : (
-                <LoadingOutlined style={{ color: '#E8708D', fontSize: 12 }} />
+                <LoadingOutlined style={{ color: '#2f6f68', fontSize: 12 }} />
               )}
-              <ToolOutlined style={{ color: '#E8708D', fontSize: 12 }} />
+              <ToolOutlined style={{ color: '#2f6f68', fontSize: 12 }} />
               <span style={{ color: '#333', fontWeight: 500 }}>{label}</span>
               <span style={{ color: '#999' }}>({summary})</span>
               {hasResult && isSuccess && resultData && (
@@ -257,15 +257,14 @@ export default function ChatPage() {
                     borderRadius: 8,
                     padding: '10px 12px',
                     marginBottom: 4,
-                    background: s.session_key === activeKey ? '#FDF5F7' : 'transparent',
-                    color: s.session_key === activeKey ? '#E8708D' : '#666',
+                    background: s.session_key === activeKey ? '#f3f8f4' : 'transparent',
+                    color: s.session_key === activeKey ? '#2f6f68' : '#666',
                     fontWeight: s.session_key === activeKey ? 500 : 400,
                     fontSize: 13,
                     transition: 'all .15s',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    group: 'session-item',
                   }}
                   onMouseEnter={e => {
                     if (s.session_key !== activeKey) e.currentTarget.style.background = '#f8f8f8';
@@ -364,8 +363,8 @@ export default function ChatPage() {
                     boxShadow: 'none',
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#E8708D';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(232,112,141,0.10), 0 0 16px rgba(232,112,141,0.06)';
+                    e.currentTarget.style.borderColor = '#2f6f68';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(47,111,104,0.10), 0 0 16px rgba(47,111,104,0.06)';
                     e.currentTarget.style.background = '#fff';
                   }}
                   onBlur={(e) => {
@@ -417,10 +416,10 @@ export default function ChatPage() {
                       zIndex: 1,
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.background = '#FDF5F7';
-                      e.currentTarget.style.borderColor = '#E8708D';
-                      e.currentTarget.style.color = '#E8708D';
-                      e.currentTarget.style.boxShadow = '0 0 10px rgba(232,112,141,0.12)';
+                      e.currentTarget.style.background = '#f3f8f4';
+                      e.currentTarget.style.borderColor = '#2f6f68';
+                      e.currentTarget.style.color = '#2f6f68';
+                      e.currentTarget.style.boxShadow = '0 0 10px rgba(47,111,104,0.12)';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
@@ -502,7 +501,7 @@ export default function ChatPage() {
                     alignItems: 'center',
                     gap: 8,
                   }}>
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 16, color: '#E8708D' }} spin />} />
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 16, color: '#2f6f68' }} spin />} />
                     <Text style={{ fontSize: 13, color: '#999' }}>小美正在思考中...</Text>
                   </div>
                 </div>
@@ -534,7 +533,7 @@ export default function ChatPage() {
                       cursor: 'pointer',
                       transition: 'all .2s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#FDF5F7'; e.currentTarget.style.borderColor = '#E8708D'; e.currentTarget.style.color = '#E8708D'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f3f8f4'; e.currentTarget.style.borderColor = '#2f6f68'; e.currentTarget.style.color = '#2f6f68'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.color = '#666'; }}
                   >
                     {s}
@@ -573,3 +572,4 @@ export default function ChatPage() {
     </div>
   );
 }
+

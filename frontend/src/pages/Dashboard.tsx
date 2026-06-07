@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   {isSuccess ? '完成' : '异常'}
                 </Tag>
               ) : (
-                <LoadingOutlined style={{ color: '#E8708D', fontSize: 10 }} />
+                <LoadingOutlined style={{ color: '#2f6f68', fontSize: 10 }} />
               )}
               <span style={{ color: '#333', fontWeight: 500 }}>{label}</span>
             </div>
@@ -516,15 +516,15 @@ export default function DashboardPage() {
             children: (
               <div>
                 <Row gutter={[16, 16]}>
-                  <Col xs={12} sm={6}><Card><Statistic title="总预约" value={overview.total_appointments || 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#E8708D' }} /></Card></Col>
+                  <Col xs={12} sm={6}><Card><Statistic title="总预约" value={overview.total_appointments || 0} prefix={<CalendarOutlined />} valueStyle={{ color: '#2f6f68' }} /></Card></Col>
                   <Col xs={12} sm={6}><Card><Statistic title="待确认" value={overview.pending_appointments || 0} valueStyle={{ color: '#faad14' }} /></Card></Col>
                   <Col xs={12} sm={6}><Card><Statistic title="已完成" value={overview.completed_appointments || 0} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-                  <Col xs={12} sm={6}><Card><Statistic title="总营收" value={overview.total_revenue || 0} prefix="¥" precision={2} valueStyle={{ color: '#E8708D' }} /></Card></Col>
+                  <Col xs={12} sm={6}><Card><Statistic title="总营收" value={overview.total_revenue || 0} prefix="¥" precision={2} valueStyle={{ color: '#2f6f68' }} /></Card></Col>
                 </Row>
 
                 {overview.top_styles?.length > 0 && (
                   <Card
-                    title={<span><FireOutlined style={{ color: '#E8708D', marginRight: 6 }} />热门款式 TOP5</span>}
+                    title={<span><FireOutlined style={{ color: '#2f6f68', marginRight: 6 }} />热门款式 TOP5</span>}
                     size="small"
                     style={{ marginTop: 16, borderRadius: 12 }}
                   >
@@ -538,13 +538,13 @@ export default function DashboardPage() {
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             width: 24, height: 24, borderRadius: '50%',
-                            background: i < 3 ? '#E8708D' : '#f0f0f0',
+                            background: i < 3 ? '#2f6f68' : '#f0f0f0',
                             color: i < 3 ? '#fff' : '#666',
                             fontSize: 12, fontWeight: 600,
                           }}>{i + 1}</span>
                         )},
                         { title: '款式', dataIndex: 'style_name' },
-                        { title: '预约数', dataIndex: 'appointment_count', render: (v: number) => <span style={{ color: '#E8708D', fontWeight: 600 }}>{v}</span> },
+                        { title: '预约数', dataIndex: 'appointment_count', render: (v: number) => <span style={{ color: '#2f6f68', fontWeight: 600 }}>{v}</span> },
                         { title: '营收', dataIndex: 'revenue', render: (v: number) => `¥${v.toFixed(2)}` },
                       ]}
                     />
@@ -653,7 +653,7 @@ export default function DashboardPage() {
                       },
                       {
                         title: '每时段最大预约数', dataIndex: 'max_bookings', width: 160, align: 'center' as const,
-                        render: (v: number) => <strong style={{ color: '#E8708D' }}>{v || '-'}</strong>,
+                        render: (v: number) => <strong style={{ color: '#2f6f68' }}>{v || '-'}</strong>,
                       },
                       {
                         title: '操作', width: 120,
@@ -691,8 +691,8 @@ export default function DashboardPage() {
                       onClick={() => setOpsActiveKey(s.session_key)}
                       style={{
                         cursor: 'pointer', borderRadius: 6, padding: '6px 8px', marginBottom: 2,
-                        background: s.session_key === opsActiveKey ? '#FDF5F7' : 'transparent',
-                        color: s.session_key === opsActiveKey ? '#E8708D' : '#666',
+                        background: s.session_key === opsActiveKey ? '#f3f8f4' : 'transparent',
+                        color: s.session_key === opsActiveKey ? '#2f6f68' : '#666',
                         fontSize: 12, transition: 'all .15s',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       }}
@@ -713,7 +713,7 @@ export default function DashboardPage() {
                 <Card
                   title={(
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span><RobotOutlined style={{ marginRight: 6, color: '#E8708D' }} />运营助手 · AI分析师</span>
+                      <span><RobotOutlined style={{ marginRight: 6, color: '#2f6f68' }} />运营助手 · AI分析师</span>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <Button size="small" type="link" onClick={() => setOpsSidebarOpen(!opsSidebarOpen)}>
                           {opsSidebarOpen ? '收起' : '历史'}
@@ -743,7 +743,7 @@ export default function DashboardPage() {
                               style={{
                                 padding: '6px 16px', borderRadius: 16,
                                 border: '1px solid #eee', background: '#fff',
-                                color: '#E8708D', fontSize: 12, cursor: 'pointer',
+                                color: '#2f6f68', fontSize: 12, cursor: 'pointer',
                                 transition: 'all .2s',
                               }}
                               onMouseEnter={e => { e.currentTarget.style.background = '#f8f8f8'; }}
@@ -764,7 +764,7 @@ export default function DashboardPage() {
                           size={28}
                           style={{
                             backgroundColor: m.role === 'user' ? '#E8E8E8' : '#eee',
-                            color: m.role === 'user' ? '#555' : '#E8708D',
+                            color: m.role === 'user' ? '#555' : '#2f6f68',
                             flexShrink: 0,
                           }} />
                         <div style={{ maxWidth: '80%' }}>
@@ -783,9 +783,9 @@ export default function DashboardPage() {
                     ))}
                     {opsLoading && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Avatar icon={<RobotOutlined />} size={28} style={{ backgroundColor: '#eee', color: '#E8708D' }} />
-                        <Spin indicator={<LoadingOutlined style={{ color: '#E8708D' }} spin />} size="small" />
-                        <span style={{ fontSize: 12, color: '#E8708D' }}>分析中...</span>
+                        <Avatar icon={<RobotOutlined />} size={28} style={{ backgroundColor: '#eee', color: '#2f6f68' }} />
+                        <Spin indicator={<LoadingOutlined style={{ color: '#2f6f68' }} spin />} size="small" />
+                        <span style={{ fontSize: 12, color: '#2f6f68' }}>分析中...</span>
                       </div>
                     )}
                   </div>
@@ -801,7 +801,7 @@ export default function DashboardPage() {
                           style={{
                             padding: '3px 10px', borderRadius: 12,
                             border: '1px solid #eee', background: '#fff',
-                            color: '#E8708D', fontSize: 11, cursor: 'pointer',
+                            color: '#2f6f68', fontSize: 11, cursor: 'pointer',
                           }}
                         >
                           {s}
@@ -994,3 +994,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

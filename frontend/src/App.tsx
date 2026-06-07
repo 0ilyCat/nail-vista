@@ -20,33 +20,34 @@ import MerchantJoinPage from './pages/MerchantJoin';
 
 const theme = {
   token: {
-    colorPrimary: '#E8708D',
-    colorPrimaryBg: '#FDF5F7',
-    colorPrimaryBgHover: '#F9ECF0',
-    colorPrimaryBorder: '#F5D5DE',
-    colorPrimaryHover: '#D65A78',
-    colorPrimaryActive: '#C94B68',
+    colorPrimary: '#2f6f68',
+    colorPrimaryBg: '#edf6f1',
+    colorLink: '#2f6f68',
+    colorText: '#1f2b29',
+    colorTextSecondary: '#667572',
+    colorBorder: 'rgba(47, 111, 104, 0.16)',
     borderRadius: 8,
     colorBgContainer: '#ffffff',
-    colorBgLayout: '#FAFAFA',
-    colorBorderSecondary: '#F0F0F0',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif',
-    fontSize: 14,
-    lineHeight: 1.6,
+    boxShadowSecondary: '0 18px 50px rgba(24, 62, 57, 0.11)',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif',
   },
   components: {
     Button: {
-      borderRadius: 8,
       controlHeight: 38,
-      paddingContentHorizontal: 20,
-    },
-    Input: {
-      borderRadius: 10,
-      controlHeight: 40,
+      borderRadius: 8,
     },
     Card: {
-      borderRadiusLG: 12,
-      paddingLG: 20,
+      borderRadiusLG: 8,
+    },
+    Input: {
+      borderRadius: 8,
+    },
+    Select: {
+      borderRadius: 8,
+    },
+    Tabs: {
+      inkBarColor: '#2f6f68',
+      itemSelectedColor: '#2f6f68',
     },
   },
 };
@@ -80,3 +81,4 @@ export default function App() {
     </ConfigProvider>
   );
 }
+

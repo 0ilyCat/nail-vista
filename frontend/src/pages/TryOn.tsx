@@ -262,13 +262,13 @@ export default function TryOnPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '6px 14px', borderRadius: 24,
-            border: '1.5px solid #E8708D', background: '#fff',
-            color: '#E8708D', fontSize: 13, fontWeight: 500,
+            border: '1.5px solid #2f6f68', background: '#fff',
+            color: '#2f6f68', fontSize: 13, fontWeight: 500,
             cursor: 'pointer', transition: 'all .2s',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.background = '#FDF5F7';
-            e.currentTarget.style.boxShadow = '0 0 12px rgba(232,112,141,0.15)';
+            e.currentTarget.style.background = '#f3f8f4';
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(47,111,104,0.15)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.background = '#fff';
@@ -331,7 +331,7 @@ export default function TryOnPage() {
                     onClick={() => setSelectedHand(h.id)}
                     title={h.is_preset ? '预设手图' : '我的手图'}
                     style={{
-                      border: selectedHand === h.id ? '3px solid #E8708D' : '3px solid transparent',
+                      border: selectedHand === h.id ? '3px solid #2f6f68' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, height: 100, position: 'relative',
                       transition: 'border-color .15s',
@@ -359,7 +359,7 @@ export default function TryOnPage() {
                     {selectedHand === h.id && (
                       <div style={{
                         position: 'absolute', top: 2, right: 2, zIndex: 2,
-                        background: '#E8708D', color: '#fff',
+                        background: '#2f6f68', color: '#fff',
                         borderRadius: '50%', width: 20, height: 20,
                         fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>✓</div>
@@ -394,7 +394,7 @@ export default function TryOnPage() {
                     key={s.id}
                     onClick={() => setSelectedStyle(s.id)}
                     style={{
-                      border: selectedStyle === s.id ? '3px solid #E8708D' : '3px solid transparent',
+                      border: selectedStyle === s.id ? '3px solid #2f6f68' : '3px solid transparent',
                       borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
                       width: 100, textAlign: 'center',
                       transition: 'border-color .15s',
@@ -408,7 +408,7 @@ export default function TryOnPage() {
                     <div style={{ fontSize: 11, padding: '2px 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.name}
                     </div>
-                    <div style={{ fontSize: 11, color: '#E8708D', fontWeight: 600, paddingBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: '#2f6f68', fontWeight: 600, paddingBottom: 4 }}>
                       ¥{s.price}
                     </div>
                   </div>
@@ -444,7 +444,7 @@ export default function TryOnPage() {
                 disabled={!selectedMerchant || !selectedHand || !selectedStyle}
                 style={{
                   marginBottom: 12, borderRadius: 8, height: 38,
-                  borderColor: '#E8708D', color: '#E8708D',
+                  borderColor: '#2f6f68', color: '#2f6f68',
                 }}
               >
                 重新生成
@@ -565,3 +565,4 @@ export default function TryOnPage() {
     </div>
   );
 }
+

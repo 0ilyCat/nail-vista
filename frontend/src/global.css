@@ -1,4 +1,4 @@
-/* ── NailVista Global Styles — 粉色系 v5.1（毛玻璃+光晕增强版） ── */
+﻿/* ── NailVista Global Styles — 粉色系 v5.1（毛玻璃+光晕增强版） ── */
 
 /* ═══════════════════ 动画关键帧 ═══════════════════ */
 @keyframes fadeInUp {
@@ -22,17 +22,17 @@
 }
 
 @keyframes blobColorShift {
-  0%   { background: #E8708D; }
-  20%  { background: #D65A78; }
-  40%  { background: #C94B68; }
-  60%  { background: #B84A9E; }
-  80%  { background: #8B6AB5; }
-  100% { background: #E8708D; }
+  0%   { background: #2f6f68; }
+  20%  { background: #245c56; }
+  40%  { background: #17413d; }
+  60%  { background: #d7b46a; }
+  80%  { background: #7ba7a0; }
+  100% { background: #2f6f68; }
 }
 
 @keyframes blobGlowPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,112,141,0.35), 0 0 40px rgba(232,112,141,0.12); }
-  50%      { box-shadow: 0 0 28px rgba(180,74,255,0.4), 0 0 56px rgba(180,74,255,0.15); }
+  0%, 100% { box-shadow: 0 0 20px rgba(47,111,104,0.35), 0 0 40px rgba(47,111,104,0.12); }
+  50%      { box-shadow: 0 0 28px rgba(215,180,106,0.4), 0 0 56px rgba(215,180,106,0.15); }
 }
 
 /* ── Chat输入框区域渐变光晕 ── */
@@ -190,8 +190,8 @@
 .floating-ask-btn:hover {
   transform: translateY(-3px) scale(1.03);
   box-shadow: 0 8px 32px rgba(0,0,0,0.16),
-    0 0 0 1px rgba(232,112,141,0.15),
-    0 4px 16px rgba(232,112,141,0.08);
+    0 0 0 1px rgba(47,111,104,0.15),
+    0 4px 16px rgba(47,111,104,0.08);
 }
 .floating-ask-btn:active {
   transform: translateY(0) scale(0.98);
@@ -200,7 +200,7 @@
 .floating-ask-text {
   font-size: 14px;
   font-weight: 600;
-  background: linear-gradient(135deg, #E8708D, #D65A78);
+  background: linear-gradient(135deg, #2f6f68, #245c56);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -247,13 +247,13 @@
 }
 .paint-ribbon:nth-child(1) {
   width: 70%; height: 45%;
-  background: linear-gradient(135deg, #E8708D, #C94B68);
+  background: linear-gradient(135deg, #2f6f68, #17413d);
   animation: ribbonFloat1 6s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
   top: 15%; left: -5%;
 }
 .paint-ribbon:nth-child(2) {
   width: 55%; height: 55%;
-  background: linear-gradient(180deg, #D65A78, #F0C674);
+  background: linear-gradient(180deg, #245c56, #F0C674);
   animation: ribbonFloat2 7s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
   top: -10%; right: 0%;
 }
@@ -265,13 +265,13 @@
 }
 .paint-ribbon:nth-child(4) {
   width: 65%; height: 40%;
-  background: linear-gradient(90deg, #B84A9E, #E87BD4);
+  background: linear-gradient(90deg, #d7b46a, #E87BD4);
   animation: ribbonFloat1 6.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.5s infinite reverse;
   bottom: 5%; right: -10%;
 }
 .paint-ribbon:nth-child(5) {
   width: 40%; height: 50%;
-  background: linear-gradient(45deg, #E8708D, #B84A9E, #7BAAD4);
+  background: linear-gradient(45deg, #2f6f68, #d7b46a, #7BAAD4);
   animation: ribbonFloat2 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s infinite;
   top: 25%; left: 30%;
 }
@@ -335,7 +335,7 @@
 .chat-markdown-body blockquote {
   margin: 8px 0;
   padding: 4px 12px;
-  border-left: 3px solid #E8708D;
+  border-left: 3px solid #2f6f68;
   background: #f8f8f8;
   border-radius: 0 6px 6px 0;
   color: #555;
@@ -345,7 +345,7 @@
   padding: 1px 5px;
   border-radius: 3px;
   font-size: 0.9em;
-  color: #C94B68;
+  color: #17413d;
 }
 .chat-markdown-body pre {
   background: #1e1e1e;
@@ -387,7 +387,7 @@
   background: #f5f5f5;
 }
 .chat-markdown-body a {
-  color: #E8708D;
+  color: #2f6f68;
   text-decoration: none;
 }
 .chat-markdown-body a:hover {
@@ -431,14 +431,14 @@
   transform: translateY(-4px);
   box-shadow:
     0 8px 24px rgba(0,0,0,0.08),
-    0 0 0 1px rgba(232,112,141,0.10),
-    0 0 16px rgba(232,112,141,0.06) !important;
+    0 0 0 1px rgba(47,111,104,0.10),
+    0 0 16px rgba(47,111,104,0.06) !important;
 }
 
 /* Input focus glow — 荧光粉光晕 */
 .ant-input:focus,
 .ant-input-focused {
-  box-shadow: 0 0 0 2px rgba(232,112,141,0.15), 0 0 8px rgba(232,112,141,0.08) !important;
+  box-shadow: 0 0 0 2px rgba(47,111,104,0.15), 0 0 8px rgba(47,111,104,0.08) !important;
 }
 
 /* TextArea focus 荧光粉光晕 */
@@ -447,7 +447,7 @@
 .ant-input[data-status="focus"],
 textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(232,112,141,0.14), 0 0 12px rgba(232,112,141,0.07) !important;
+  box-shadow: 0 0 0 2px rgba(47,111,104,0.14), 0 0 12px rgba(47,111,104,0.07) !important;
 }
 
 /* Smoother scrollbar */
@@ -474,15 +474,15 @@ textarea:focus {
   white-space: nowrap;
   letter-spacing: 1px;
   text-decoration: none;
-  background: linear-gradient(135deg, #E8708D 0%, #D65A78 25%, #C94B68 50%, #B84A9E 75%, #8B6AB5 100%);
+  background: linear-gradient(135deg, #2f6f68 0%, #245c56 25%, #17413d 50%, #d7b46a 75%, #7ba7a0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 1px 2px rgba(232,112,141,0.12));
+  filter: drop-shadow(0 1px 2px rgba(47,111,104,0.12));
   transition: filter 0.2s;
 }
 .logo-brand:hover {
-  filter: drop-shadow(0 3px 10px rgba(232,112,141,0.35));
+  filter: drop-shadow(0 3px 10px rgba(47,111,104,0.35));
 }
 
 /* ═══════════════════ 菜单栏全部毛玻璃 ═══════════════════ */
@@ -495,14 +495,14 @@ textarea:focus {
   transition: all 0.2s ease !important;
 }
 .main-nav-menu .ant-menu-item:hover {
-  background: rgba(232,112,141,0.06) !important;
+  background: rgba(47,111,104,0.06) !important;
 }
 .main-nav-menu .ant-menu-item-selected {
-  background: rgba(232,112,141,0.10) !important;
-  color: #E8708D !important;
+  background: rgba(47,111,104,0.10) !important;
+  color: #2f6f68 !important;
 }
 .main-nav-menu .ant-menu-item-selected::after {
-  border-bottom-color: #E8708D !important;
+  border-bottom-color: #2f6f68 !important;
 }
 .main-nav-menu .ant-menu-item a {
   color: inherit !important;
@@ -515,7 +515,7 @@ textarea:focus {
   width: 18px;
   height: 18px;
   border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-  background: linear-gradient(135deg, #E8708D, #B84A9E);
+  background: linear-gradient(135deg, #2f6f68, #d7b46a);
   animation: blobMorph 3s ease-in-out infinite, blobColorShift 5s ease-in-out infinite;
   flex-shrink: 0;
   vertical-align: middle;
@@ -533,12 +533,12 @@ textarea:focus {
 /* Menu item hover —粉色下划线 */
 .ant-menu-horizontal > .ant-menu-item:hover::after,
 .ant-menu-horizontal > .ant-menu-submenu:hover::after {
-  border-bottom-color: #E8708D !important;
+  border-bottom-color: #2f6f68 !important;
 }
 
 /* Menu selected item */
 .ant-menu-horizontal > .ant-menu-item-selected::after {
-  border-bottom-color: #E8708D !important;
+  border-bottom-color: #2f6f68 !important;
 }
 
 /* Tag refinements — 圆角柔和化 */
@@ -581,22 +581,22 @@ textarea:focus {
   transition: all 0.25s ease !important;
 }
 .ant-upload-drag:hover {
-  border-color: #E8708D !important;
+  border-color: #2f6f68 !important;
   background: #fdfdfd;
 }
 
 /* TimePicker panel — 粉色选择 */
 .ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
-  background: #FDF5F7 !important;
-  color: #E8708D;
+  background: #f3f8f4 !important;
+  color: #2f6f68;
 }
 
 /* Date picker selection */
 .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
 .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
 .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
-  background: #E8708D !important;
-  border-color: #E8708D !important;
+  background: #2f6f68 !important;
+  border-color: #2f6f68 !important;
 }
 
 /* Message/notification — rounded */
@@ -606,60 +606,60 @@ textarea:focus {
 
 /* Pagination active — 粉色 */
 .ant-pagination-item-active a {
-  color: #E8708D !important;
+  color: #2f6f68 !important;
 }
 .ant-pagination-item-active {
-  border-color: #E8708D !important;
+  border-color: #2f6f68 !important;
 }
 
 /* Tab bar — 粉色active指示器 */
 .ant-tabs-ink-bar {
-  background: #E8708D !important;
+  background: #2f6f68 !important;
 }
 .ant-tabs-tab:hover {
-  color: #E8708D !important;
+  color: #2f6f68 !important;
 }
 .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #E8708D !important;
+  color: #2f6f68 !important;
 }
 
 /* Checkbox & Radio checked — 粉色 */
 .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #E8708D !important;
-  border-color: #E8708D !important;
+  background-color: #2f6f68 !important;
+  border-color: #2f6f68 !important;
 }
 .ant-radio-wrapper:checked .ant-radio-inner {
-  border-color: #E8708D !important;
+  border-color: #2f6f68 !important;
 }
 .ant-radio-wrapper:checked .ant-radio-inner::after {
-  background-color: #E8708D !important;
+  background-color: #2f6f68 !important;
 
 }
 /* Switch on */
 .ant-switch-checked {
-  background-color: #E8708D !important;
+  background-color: #2f6f68 !important;
 }
 
 /* Link color override */
 a:hover {
-  color: #D65A78;
+  color: #245c56;
 }
 
 /* Loading spinner tint — 粉色 */
 .ant-spin-dot-item {
-  background-color: #E8708D !important;
+  background-color: #2f6f68 !important;
 }
 
 /* Badge count — 粉色 */
 .ant-badge-count {
-  background-color: #E8708D !important;
+  background-color: #2f6f68 !important;
 }
 
 /* ═══════════════════ v5.1 新增：全局交互微动效 ═══════════════════ */
 
 /* 按钮hover荧光边缘 */
 .ant-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 12px rgba(232,112,141,0.25), 0 2px 8px rgba(232,112,141,0.15) !important;
+  box-shadow: 0 0 12px rgba(47,111,104,0.25), 0 2px 8px rgba(47,111,104,0.15) !important;
 }
 
 /* 卡片可点击项hover浅灰底 */
@@ -669,7 +669,7 @@ a:hover {
 
 /* Tag hover 轻微发光 */
 .ant-tag:hover {
-  box-shadow: 0 0 6px rgba(232,112,141,0.10);
+  box-shadow: 0 0 6px rgba(47,111,104,0.10);
 }
 
 /* 导航栏毛玻璃效果辅助：确保内容区背景可见 */
@@ -689,3 +689,5 @@ img:not([src]) {
   min-width: 40px;
   min-height: 40px;
 }
+
+

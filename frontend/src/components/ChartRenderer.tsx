@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ChartRenderer — 从 AI 输出的 ```chart``` 代码块中提取 JSON 配置并渲染 ECharts 图表
  */
 import { useEffect, useRef } from 'react';
@@ -30,7 +30,7 @@ export default function ChartRenderer({ config, id }: ChartRendererProps) {
     const chartType = (parsed.type as string) || 'bar';
 
     // 构建颜色序列（小红书风格暖色系）
-    const colorPalette = ['#E8708D', '#D65A78', '#C94B68', '#F0A898', '#B84A9E', '#7BAAD4', '#9B7BB8', '#D6A5B8'];
+    const colorPalette = ['#2f6f68', '#7ba7a0', '#17413d', '#d7b46a', '#8dbbb0', '#5e8c86', '#9fb8aa', '#c9b47a'];
 
     const option: Record<string, unknown> = {
       title: {
@@ -135,3 +135,4 @@ export function extractCharts(content: string): { cleanContent: string; charts: 
   }
   return { cleanContent: content.replace(regex, '').trim(), charts };
 }
+
