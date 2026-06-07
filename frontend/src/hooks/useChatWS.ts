@@ -11,54 +11,6 @@ import { message } from 'antd';
 
 const WS_BASE = `ws://${window.location.host}`;
 
-// ═══════════════════════════════════════════════════
-// 模块级单例状态（按 agentType 隔离，页面切换不丢失）
-// ═══════════════════════════════════════════════════
-interface GlobalState {
-  messages: ChatMessage[];
-  loading: boolean;
-  sessionKey: string | null;
-  error: string | null;
-  toolCalls: ToolCallEntry[];
-  listeners: Set<() => void>;
-  ws: WebSocket | null;
-  stream: StreamState;
-  reconnectTimer: ReturnType<typeof setTimeout> | null;
-  minLoadingTimer: ReturnType<typeof setTimeout> | null;
-  /** 会话版本号：clearMessages 后递增，过滤残余 session 事件 */
-  sessionStamp: number;
-  /** 标记是否已通过 send() 开始新会话（允许接收 session 事件） */
-  expectNewSession: boolean;
-}
-
-const globalStates = new Map<string, GlobalState>();
-
-function getGlobal(agentType: string): GlobalState {
-  if (!globalStates.has(agentType)) {
-    globalStates.set(agentType, {
-      messages: [],
-      loading: false,
-      sessionKey: null,
-      error: null,
-      toolCalls: [],
-      listeners: new Set(),
-      ws: null,
-      stream: {
-        loading: false,
-        streamingContent: '',
-        toolCalls: [],
-        done: false,
-        hasAssistantMsg: false,
-      },
-      reconnectTimer: null,
-      minLoadingTimer: null,
-      sessionStamp: 0,
-      expectNewSession: false,
-    });
-  }
-  return globalStates.get(agentType)!;
-}
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -84,28 +36,25 @@ interface StreamState {
   hasAssistantMsg: boolean;
 }
 
-function notify(state: GlobalState) {
-  state.listeners.forEach(fn => fn());
-}
-
-function tryParse(v: any): any {
-  if (typeof v !== 'string') return v;
-  try { return JSON.parse(v); } catch { return v; }
-}
-
 export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sessionKey, setSessionKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const streamRef = useRef<StreamState>({
+    loading: false,
+    streamingContent: '',
+    toolCalls: [],
+    done: false,
+    hasAssistantMsg: false,
+  });
   const [, forceUpdate] = useState(0);
-  const state = getGlobal(agentType);
 
-  // 订阅模块级状态变化，驱动 React 重渲染
-  useEffect(() => {
-    const listener = () => forceUpdate(n => n + 1);
-    state.listeners.add(listener);
-    return () => { state.listeners.delete(listener); };
-  }, [state]);
-
-  const sessionKeyRef = useRef<string | null>(state.sessionKey);
-  const stampRef = useRef<number>(state.sessionStamp);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionKeyRef = useRef<string | null>(null);
+  const minLoadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getToken = useCallback(() => localStorage.getItem('token') || '', []);
 
@@ -114,7 +63,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       const token = getToken();
       if (!token) { reject(new Error('未登录')); return; }
 
-      if (state.ws?.readyState === WebSocket.OPEN) {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
         resolve();
         return;
       }
@@ -127,9 +76,8 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
       ws.onopen = () => {
         console.log('[useChatWS] 已连接');
-        state.ws = ws;
-        state.error = null;
-        notify(state);
+        wsRef.current = ws;
+        setError(null);
         if (!settled) { settled = true; resolve(); }
       };
 
@@ -144,17 +92,16 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
       ws.onerror = (e) => {
         console.error('[useChatWS] 连接错误', e);
-        state.error = 'WebSocket连接错误';
-        notify(state);
+        setError('WebSocket连接错误');
         if (!settled) { settled = true; reject(new Error('WebSocket连接错误')); }
       };
 
       ws.onclose = () => {
         console.log('[useChatWS] 连接关闭');
-        state.ws = null;
+        wsRef.current = null;
         if (!settled) { settled = true; reject(new Error('WebSocket连接已关闭')); }
-        if (!state.stream.done) {
-          state.reconnectTimer = setTimeout(() => {
+        if (!streamRef.current.done) {
+          reconnectTimerRef.current = setTimeout(() => {
             console.log('[useChatWS] 尝试重连...');
             connect().catch(() => {});
           }, 3000);
@@ -164,84 +111,87 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   }, [agentType, getToken]);
 
   const disconnect = useCallback(() => {
-    if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
-    if (state.ws) {
-      state.ws.close();
-      state.ws = null;
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
   }, []);
 
-  // 不自动 disconnect — 由消费者决定何时断开（页面切换时保持连接）
+  useEffect(() => {
+    return () => disconnect();
+  }, [disconnect]);
 
   /** 确保 loading 至少显示 minMs 毫秒，避免一闪而过 */
   const stopLoadingMin = useCallback((minMs: number = 600) => {
-    if (state.minLoadingTimer) clearTimeout(state.minLoadingTimer);
-    state.minLoadingTimer = setTimeout(() => {
-      state.loading = false;
-      state.stream.loading = false;
-      state.minLoadingTimer = null;
-      notify(state);
+    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
+    minLoadingTimerRef.current = setTimeout(() => {
+      setLoading(false);
+      streamRef.current.loading = false;
+      minLoadingTimerRef.current = null;
     }, minMs);
   }, []);
 
   const handleEvent = useCallback((data: any) => {
     const type = data.type;
-    const stream = state.stream;
+    const stream = streamRef.current;
 
     switch (type) {
       case 'session':
-        // 只在新会话模式下接受 session 事件（send 后置 expectNewSession=true）
-        if (state.expectNewSession) {
-          state.sessionKey = data.session_key;
-          sessionKeyRef.current = data.session_key;
-          state.expectNewSession = false;
-          notify(state);
-        }
+        setSessionKey(data.session_key);
+        sessionKeyRef.current = data.session_key;
         break;
 
       case 'thinking': {
+        // 思考过程：确保有 assistant 消息后再追加 thinking
         if (!stream.hasAssistantMsg) {
           stream.hasAssistantMsg = true;
-          state.messages = [...state.messages, {
+          setMessages(prev => [...prev, {
             role: 'assistant',
             content: '',
             tool_calls: [],
             thinking: [{ type: 'thinking', content: data.content, round: data.round }],
-          }];
+          }]);
         } else {
-          const last = state.messages[state.messages.length - 1];
-          if (last?.role === 'assistant') {
-            const existing = Array.isArray(last.thinking) ? last.thinking : [];
-            state.messages = [...state.messages.slice(0, -1), {
-              ...last,
-              thinking: [...existing, { type: 'thinking', content: data.content, round: data.round }],
-            }];
-          }
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              const existing = Array.isArray(last.thinking) ? last.thinking : [];
+              return [...prev.slice(0, -1), {
+                ...last,
+                thinking: [...existing, { type: 'thinking', content: data.content, round: data.round }],
+              }];
+            }
+            return prev;
+          });
         }
-        notify(state);
         break;
       }
 
       case 'text': {
+        // 流式文本增量：确保只有一个 assistant 消息被更新
         stream.streamingContent += data.content;
         if (!stream.hasAssistantMsg) {
           stream.hasAssistantMsg = true;
-          state.messages = [...state.messages, {
+          setMessages(prev => [...prev, {
             role: 'assistant',
             content: stream.streamingContent,
             tool_calls: [...stream.toolCalls],
-          }];
+          }]);
         } else {
-          const last = state.messages[state.messages.length - 1];
-          if (last?.role === 'assistant') {
-            state.messages = [...state.messages.slice(0, -1), {
-              ...last,
-              content: stream.streamingContent,
-              tool_calls: [...stream.toolCalls],
-            }];
-          }
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), {
+                ...last,
+                content: stream.streamingContent,
+                tool_calls: [...stream.toolCalls],
+              }];
+            }
+            return prev;
+          });
         }
-        notify(state);
+        forceUpdate(n => n + 1);
         break;
       }
 
@@ -252,76 +202,83 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
           arguments: data.arguments,
           round: data.round,
         });
-        state.toolCalls = [...stream.toolCalls];
         if (!stream.hasAssistantMsg) {
           stream.hasAssistantMsg = true;
-          state.messages = [...state.messages, {
+          setMessages(prev => [...prev, {
             role: 'assistant',
             content: stream.streamingContent,
             tool_calls: [...stream.toolCalls],
-          }];
+          }]);
         } else {
-          const last = state.messages[state.messages.length - 1];
-          if (last?.role === 'assistant') {
-            state.messages = [...state.messages.slice(0, -1), { ...last, tool_calls: [...stream.toolCalls] }];
-          }
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), { ...last, tool_calls: [...stream.toolCalls] }];
+            }
+            return prev;
+          });
         }
-        notify(state);
+        forceUpdate(n => n + 1);
         break;
       }
 
       case 'tool_result':
       case 'tool_result_local':
       case 'tool_output': {
-        // 后端可能发送 JSON 字符串，需要解析
-        const rawOutput = data.output || data.result;
-        const parsed = typeof rawOutput === 'string' ? tryParse(rawOutput) : rawOutput;
         if (data.call_id) {
           const idx = stream.toolCalls.findIndex(t => t.call_id === data.call_id);
           if (idx >= 0) {
-            stream.toolCalls[idx] = { ...stream.toolCalls[idx], result: parsed || {}, error: data.error };
+            stream.toolCalls[idx] = {
+              ...stream.toolCalls[idx],
+              result: data.output || data.result || {},
+              error: data.error,
+            };
           }
         } else if (data.name) {
           for (let i = stream.toolCalls.length - 1; i >= 0; i--) {
             if (stream.toolCalls[i].name === data.name && !stream.toolCalls[i].result) {
-              stream.toolCalls[i] = { ...stream.toolCalls[i], result: parsed || {}, error: data.error };
+              stream.toolCalls[i] = {
+                ...stream.toolCalls[i],
+                result: data.output || data.result || {},
+                error: data.error,
+              };
               break;
             }
           }
         }
-        state.toolCalls = [...stream.toolCalls];
-        const last = state.messages[state.messages.length - 1];
-        if (last?.role === 'assistant') {
-          state.messages = [...state.messages.slice(0, -1), { ...last, tool_calls: [...stream.toolCalls] }];
-        }
-        notify(state);
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant') {
+            return [...prev.slice(0, -1), { ...last, tool_calls: [...stream.toolCalls] }];
+          }
+          return prev;
+        });
+        forceUpdate(n => n + 1);
         break;
       }
 
       case 'status':
         if (data.status === 'running') {
-          state.loading = true;
-          state.stream.loading = true;
+          setLoading(true);
+          streamRef.current.loading = true;
         } else if (data.status === 'done') {
-          state.stream.done = true;
+          streamRef.current.done = true;
           stopLoadingMin(500);
         } else if (data.status === 'error') {
-          state.error = data.message || '执行异常';
+          setError(data.message || '执行异常');
           stopLoadingMin(500);
         }
-        notify(state);
         break;
 
       case 'done':
-        state.stream.done = true;
+        streamRef.current.done = true;
         stopLoadingMin(500);
         break;
 
       case 'error':
         console.error('[useChatWS] 服务端错误', data.message);
-        state.error = data.message;
+        setError(data.message);
         stopLoadingMin(500);
-        notify(state);
         message.error(data.message || '对话异常');
         break;
 
@@ -333,7 +290,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const send = useCallback(async (userMessage: string) => {
     if (!userMessage.trim()) return;
 
-    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       try {
         await connect();
       } catch (e) {
@@ -342,68 +299,54 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       }
     }
 
-    state.stream = {
+    streamRef.current = {
       loading: true,
       streamingContent: '',
       toolCalls: [],
       done: false,
       hasAssistantMsg: false,
     };
-    state.loading = true;
-    state.error = null;
-    state.messages = [...state.messages, { role: 'user', content: userMessage }];
-    // 无 sessionKey → 新会话，标记等待 session 事件
-    if (!sessionKeyRef.current) {
-      state.expectNewSession = true;
-    }
-    notify(state);
+    setLoading(true);
+    setError(null);
 
-    state.ws!.send(JSON.stringify({
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    wsRef.current!.send(JSON.stringify({
       type: 'user_message',
       text: userMessage,
       session_key: sessionKeyRef.current || undefined,
     }));
   }, [connect]);
 
-  const toolCalls = state.stream.toolCalls;
+  const toolCalls = streamRef.current.toolCalls;
 
   const clearMessages = useCallback(() => {
-    if (state.minLoadingTimer) clearTimeout(state.minLoadingTimer);
-    state.messages = [];
-    state.toolCalls = [];
+    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
+    setMessages([]);
     sessionKeyRef.current = null;
-    state.sessionKey = null;
-    state.stream = {
+    streamRef.current = {
       loading: false,
       streamingContent: '',
       toolCalls: [],
       done: false,
       hasAssistantMsg: false,
     };
-    state.loading = false;
-    state.sessionStamp += 1;
-    stampRef.current = state.sessionStamp;
-    state.expectNewSession = false;  // 重置新会话标记
-    notify(state);
+    setLoading(false);
   }, []);
 
   /** 手动设置当前会话 key（切换历史会话时调用） */
   const setCurrentSessionKey = useCallback((key: string | null) => {
     sessionKeyRef.current = key;
-    state.sessionKey = key;
-    state.expectNewSession = false;  // 切历史会话不期待新 session 事件
-    state.sessionStamp += 1;
-    stampRef.current = state.sessionStamp;
-    notify(state);
+    setSessionKey(key);
   }, []);
 
   return {
-    messages: state.messages,
+    messages,
     send,
-    loading: state.loading,
-    error: state.error,
-    sessionKey: state.sessionKey,
-    toolCalls: state.toolCalls,
+    loading,
+    error,
+    sessionKey,
+    toolCalls,
     connect,
     disconnect,
     clearMessages,

@@ -70,7 +70,7 @@ export default function ChatPage() {
   useEffect(() => {
     loadSessions();
     connect().catch(() => message.warning('AI对话连接失败，请刷新重试'));
-    return () => { /* 不 disconnect，保持 WS 连接跨页面存活 */ };
+    return () => { /* 不 disconnect，保持 WS 跨页面 */ };
   }, []);
 
   const loadSessions = () => {
@@ -82,19 +82,19 @@ export default function ChatPage() {
   };
 
   // 加载历史消息
+  // 加载历史消息
   useEffect(() => {
     if (activeKey) {
       // 如果 activeKey 是 WS session 事件触发的（新会话），跳过清除和重新加载
       if (activeKeyFromWsRef.current) {
         activeKeyFromWsRef.current = false;
-        // 仍需同步 sessionKeyRef 给 WS hook
         setCurrentSessionKey(activeKey);
         return;
       }
       clearMessages();
       setHistoryMessages([]);
       setHistoryLoading(true);
-      setCurrentSessionKey(activeKey); // 通知 WS 使用该 session_key
+      setCurrentSessionKey(activeKey);
       chatAPI.getMessages(activeKey).then(r => {
         const msgs = r.data.messages || [];
         setHistoryMessages(msgs.map((m: any) => ({
@@ -119,11 +119,7 @@ export default function ChatPage() {
     if (sessionKey) {
       activeKeyFromWsRef.current = true;  // 标记来自 WS，跳过历史重载
       setActiveKey(sessionKey);
-      // 直接插入到侧边栏，不依赖后端 DB 提交
-      setSessions(prev => {
-        if (prev.some(s => s.session_key === sessionKey)) return prev;
-        return [{ session_key: sessionKey, title: '新对话' }, ...prev];
-      });
+      loadSessions();
     }
   }, [sessionKey]);
 
@@ -267,7 +263,7 @@ export default function ChatPage() {
               locale={{ emptyText: '' }}
               renderItem={(s: any) => (
                 <div
-                  onClick={() => { activeKeyFromWsRef.current = false; setActiveKey(s.session_key); }}
+                  onClick={() => setActiveKey(s.session_key)}
                   style={{
                     cursor: 'pointer',
                     borderRadius: 8,

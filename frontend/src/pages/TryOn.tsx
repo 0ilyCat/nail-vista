@@ -118,38 +118,9 @@ export default function TryOnPage() {
         setPageLoading(false);
       }
     };
-    // 恢复上次页面状态（切出再切回不丢失选择）
-    const saved = localStorage.getItem('tryon_state');
-    if (saved) {
-      try {
-        const s = JSON.parse(saved);
-        if (s.selectedHand) setSelectedHand(s.selectedHand);
-        if (s.selectedStyle) setSelectedStyle(s.selectedStyle);
-        if (s.resultUrl) setResultUrl(s.resultUrl);
-        if (s.wasLoading) setResultUrl(''); // 切回时清除旧结果，不显示动画
-        localStorage.removeItem('tryon_state');
-      } catch { /* ignore */ }
-    }
     loadData();
     loadHistory(1);
   }, []);
-
-  // 持久化状态到 localStorage（页面切换前保存）
-  useEffect(() => {
-    const saveState = () => {
-      if (selectedHand || selectedStyle || resultUrl || loading) {
-        localStorage.setItem('tryon_state', JSON.stringify({
-          selectedHand, selectedStyle, resultUrl,
-          wasLoading: loading,
-        }));
-      }
-    };
-    window.addEventListener('beforeunload', saveState);
-    return () => {
-      saveState(); // 组件卸载时（路由切换）保存
-      window.removeEventListener('beforeunload', saveState);
-    };
-  }, [selectedHand, selectedStyle, resultUrl, loading]);
 
   // 预选商家后自动加载款式
   useEffect(() => {
@@ -507,7 +478,7 @@ export default function TryOnPage() {
               />
             )}
 
-            {resultUrl && !loading && (
+            {resultUrl && (
               <Image.PreviewGroup>
                 <Image src={resultUrl} alt="试戴效果" style={{ borderRadius: 8, width: '100%' }}
                   fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZkZjJmNCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjQ4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iI2M3Nzk4NiI+8J+SsTwvdGV4dD48L3N2Zz4="
