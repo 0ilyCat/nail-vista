@@ -260,7 +260,7 @@ export default function ChatPage() {
               locale={{ emptyText: '' }}
               renderItem={(s: any) => (
                 <div
-                  onClick={() => setActiveKey(s.session_key)}
+                  onClick={() => { activeKeyFromWsRef.current = false; setActiveKey(s.session_key); }}
                   style={{
                     cursor: 'pointer',
                     borderRadius: 8,
