@@ -87,6 +87,7 @@ a {
 
 .nv-search {
   width: min(300px, 24vw);
+  align-self: center;
 }
 
 .nv-search .ant-input-affix-wrapper,

@@ -131,7 +131,7 @@ export default function HomePage() {
                 }>
                   <Card.Meta
                     title={<span style={{ fontSize: 14 }}>{s.name}</span>}
-                    description={<span className="nv-price">{s.price ? `${s.price}` : '查看详情'}</span>}
+                    description={<span className="nv-price">{s.price ? `¥${s.price}` : '查看详情'}</span>}
                   />
                 </Card>
               </Link>

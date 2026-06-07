@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Input, Button, Dropdown, Avatar, Space } from 'antd';
 import {
@@ -6,6 +6,7 @@ import {
   ShopOutlined, UserOutlined, HeartOutlined, DashboardOutlined,
   CalendarOutlined, LogoutOutlined, LoginOutlined, HighlightOutlined,
 } from '@ant-design/icons';
+import { imgUrl } from '../services/image';
 
 const { Header, Content, Footer } = Layout;
 
@@ -16,9 +17,20 @@ export default function AppLayout() {
   const [searchVal, setSearchVal] = useState('');
 
   useEffect(() => {
-    const u = localStorage.getItem('user');
-    setUser(u ? JSON.parse(u) : null);
-  }, [loc.pathname]);
+    const syncUser = () => {
+      const u = localStorage.getItem('user');
+      setUser(u ? JSON.parse(u) : null);
+    };
+    syncUser();
+    // 监听其他标签页 / 组件对 localStorage 的修改
+    window.addEventListener('storage', syncUser);
+    // Profile 等页面更新头像后手动触发自定义事件
+    window.addEventListener('userUpdated', syncUser);
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('userUpdated', syncUser);
+    };
+  }, []);
 
   const onLogout = () => {
     localStorage.removeItem('token');
@@ -80,9 +92,11 @@ export default function AppLayout() {
                 { key: 'profile', label: '用户中心', icon: <UserOutlined />, onClick: () => nav('/profile') },
                 { key: 'logout', label: '退出登录', icon: <LogoutOutlined />, onClick: onLogout },
               ]}}>
-                <Avatar style={{ backgroundColor: '#2f6f68', cursor: 'pointer' }}>
-                  {user.nickname?.[0] || user.username?.[0] || <UserOutlined />}
-                </Avatar>
+                <Avatar
+                  src={imgUrl(user.avatar_url)}
+                  icon={<UserOutlined />}
+                  style={{ backgroundColor: '#d9d9d9', cursor: 'pointer', color: '#999' }}
+                />
               </Dropdown>
             </>
           ) : (

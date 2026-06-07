@@ -83,6 +83,7 @@ export default function ProfilePage() {
       const updated = { ...user, avatar_url: avatarUrl };
       localStorage.setItem('user', JSON.stringify(updated));
       setUser(updated);
+      window.dispatchEvent(new Event('userUpdated'));
       message.success('头像已更新');
     } catch (e: any) {
       message.error(e.response?.data?.detail || '头像上传失败');
@@ -98,6 +99,7 @@ export default function ProfilePage() {
       const updated = res.data;
       localStorage.setItem('user', JSON.stringify(updated));
       setUser(updated);
+      window.dispatchEvent(new Event('userUpdated'));
       message.success('个人信息已保存');
     } catch (e: any) {
       message.error(e.response?.data?.detail || '保存失败');

@@ -54,6 +54,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionKeyRef = useRef<string | null>(null);
+  const minLoadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getToken = useCallback(() => localStorage.getItem('token') || '', []);
 
@@ -120,6 +121,16 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   useEffect(() => {
     return () => disconnect();
   }, [disconnect]);
+
+  /** 确保 loading 至少显示 minMs 毫秒，避免一闪而过 */
+  const stopLoadingMin = useCallback((minMs: number = 600) => {
+    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
+    minLoadingTimerRef.current = setTimeout(() => {
+      setLoading(false);
+      streamRef.current.loading = false;
+      minLoadingTimerRef.current = null;
+    }, minMs);
+  }, []);
 
   const handleEvent = useCallback((data: any) => {
     const type = data.type;
@@ -249,28 +260,25 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       case 'status':
         if (data.status === 'running') {
           setLoading(true);
+          streamRef.current.loading = true;
         } else if (data.status === 'done') {
-          stream.loading = false;
-          stream.done = true;
-          setLoading(false);
+          streamRef.current.done = true;
+          stopLoadingMin(500);
         } else if (data.status === 'error') {
           setError(data.message || '执行异常');
-          setLoading(false);
-          stream.loading = false;
+          stopLoadingMin(500);
         }
         break;
 
       case 'done':
-        stream.loading = false;
-        stream.done = true;
-        setLoading(false);
+        streamRef.current.done = true;
+        stopLoadingMin(500);
         break;
 
       case 'error':
         console.error('[useChatWS] 服务端错误', data.message);
         setError(data.message);
-        setLoading(false);
-        stream.loading = false;
+        stopLoadingMin(500);
         message.error(data.message || '对话异常');
         break;
 
@@ -313,6 +321,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const toolCalls = streamRef.current.toolCalls;
 
   const clearMessages = useCallback(() => {
+    if (minLoadingTimerRef.current) clearTimeout(minLoadingTimerRef.current);
     setMessages([]);
     sessionKeyRef.current = null;
     streamRef.current = {
