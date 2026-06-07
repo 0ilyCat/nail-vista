@@ -47,4 +47,5 @@ done
 # 启动 Gateway
 echo "[步骤 3/3] 启动 OpenClaw Gateway (端口 18789)..."
 export OPENCLAW_HOME=/app
+export HOME=/app
 exec openclaw gateway run --port 18789
