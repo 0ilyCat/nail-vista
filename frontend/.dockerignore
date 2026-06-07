@@ -7,4 +7,3 @@ dist
 *.md
 Dockerfile
 .dockerignore
-nginx.conf
