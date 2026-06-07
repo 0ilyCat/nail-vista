@@ -2,6 +2,8 @@
 NailVista 核心配置
 支持 .env 文件和环境变量注入
 """
+from urllib.parse import quote_plus
+
 from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import List
@@ -54,7 +56,9 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        # URL 编码密码，防止特殊字符（如 @ / : #）破坏连接串
+        encoded_pw = quote_plus(self.DB_PASSWORD)
+        return f"mysql+aiomysql://{self.DB_USER}:{encoded_pw}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
     def static_path(self) -> Path:

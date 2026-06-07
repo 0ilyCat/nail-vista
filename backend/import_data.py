@@ -129,6 +129,13 @@ async def main():
     db = async_session_factory()
 
     try:
+        # 幂等检查：如果款式数据已存在则跳过全部导入
+        from sqlalchemy import func
+        existing_styles = (await db.execute(select(func.count(NailStyle.id)))).scalar()
+        if existing_styles > 0:
+            print(f"种子数据已存在 ({existing_styles} 个款式)，跳过导入")
+            return
+
         # ========== 用户 ==========
         user_objs = []
         for u in USERS:

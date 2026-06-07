@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+*.pyo
+.env
+.env.local
+.git
+.gitignore
+.venv
+venv
+*.egg-info
+.pytest_cache
+.mypy_cache
+Dockerfile
+.dockerignore

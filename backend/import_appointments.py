@@ -66,9 +66,12 @@ async def main():
             print("没有普通用户数据，跳过")
             return
 
-        # 检查已有预约数量
+        # 检查已有预约数量（幂等：已有数据则跳过）
         existing_count = (await db.execute(select(func.count(Appointment.id)))).scalar() or 0
         print(f"当前已有 {existing_count} 条预约记录")
+        if existing_count >= 30:
+            print("预约数据已存在，跳过导入")
+            return
 
         total_created = 0
 
