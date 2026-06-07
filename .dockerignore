@@ -1,0 +1,43 @@
+# 排除大型源码目录（OpenClaw 构建不需要）
+backend/
+frontend/
+output/
+tests/
+test-results/
+node_modules/
+screenshots/
+
+# 排除运行时/环境文件
+.env
+.env.*
+.git
+.gitignore
+*.ps1
+*.psd1
+
+# OpenClaw 运行时数据（不打包进镜像）
+.openclaw/logs/
+.openclaw/workspace/
+.openclaw/workspace-*/
+.openclaw/memory/
+.openclaw/tasks/
+.openclaw/plugins/
+.openclaw/plugin-skills/
+.openclaw/openclaw.json.last-good
+.openclaw/update-check.json
+
+# Agent 运行时状态
+.openclaw/agents/*/state/
+.openclaw/agents/*/sessions/
+
+# 设备身份（私密）
+.openclaw/identity/
+.openclaw/devices/
+
+# openclaw.json 含真实密钥，不打包
+.openclaw/openclaw.json
+
+# Docker 文件
+Dockerfile
+Dockerfile.*
+docker-compose.yml

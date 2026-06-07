@@ -1,6 +1,6 @@
 # ============================================================
 # NailVista Docker Compose 部署配置
-# 服务: MySQL 8.0 + Backend(FastAPI) + Frontend(Nginx)
+# 服务: MySQL 8.0 + Backend(FastAPI) + Frontend(Nginx) + OpenClaw Gateway
 # 网络: my-network
 # ============================================================
 version: "3.9"
@@ -58,8 +58,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-nailvista-jwt-secret-change-in-production}
       # 阿里百炼 AI（AI试戴必填）
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
-      # OpenClaw AI Gateway（AI对话，可选）
-      OPENCLAW_BASE_URL: ${OPENCLAW_BASE_URL:-http://127.0.0.1:18789}
+      # OpenClaw AI Gateway（AI对话）
+      OPENCLAW_BASE_URL: http://openclaw:18789
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-nailvista-dev-token}
       # CORS（替换为服务器IP或域名）
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost","http://127.0.0.1"]}
@@ -72,6 +72,25 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      openclaw:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  # ── OpenClaw AI Gateway ──
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+    container_name: nailvista-openclaw
+    environment:
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-nailvista-dev-token}
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw_data:/app/.openclaw
     restart: unless-stopped
     networks:
       - my-network
@@ -95,6 +114,8 @@ volumes:
   mysql_data:
     driver: local
   uploads_data:
+    driver: local
+  openclaw_data:
     driver: local
 
 # ── 网络 ──

@@ -43,6 +43,7 @@ if [ ! -f .env ]; then
     echo -e "${GREEN}已创建 .env 文件（从 .env.deploy 模板）${NC}"
     echo -e "${RED}>>> 请编辑 .env 文件，修改以下必填项：${NC}"
     echo -e "${RED}    - DASHSCOPE_API_KEY（AI试戴必填）${NC}"
+    echo -e "${RED}    - MIMO_API_KEY（AI对话必填）${NC}"
     echo -e "${RED}    - JWT_SECRET_KEY（改为随机字符串）${NC}"
     echo -e "${RED}    - DB_PASSWORD（数据库密码）${NC}"
     echo -e "${RED}    - CORS_ORIGINS（替换 YOUR_SERVER_IP 为服务器公网IP）${NC}"
@@ -84,6 +85,15 @@ else
 fi
 echo ""
 
+# 检查 OpenClaw
+echo "OpenClaw Gateway 检查:"
+if curl -sf http://localhost:18789/ >/dev/null 2>&1; then
+    echo -e "${GREEN}  OpenClaw: OK${NC}"
+else
+    echo -e "${YELLOW}  OpenClaw: 未就绪（启动较慢，稍后可用）${NC}"
+fi
+echo ""
+
 # 检查前端
 echo "前端检查:"
 if curl -sf http://localhost:80/ >/dev/null 2>&1; then
@@ -114,7 +124,8 @@ echo -e "  停止服务:  ${YELLOW}docker compose down${NC}"
 echo -e "  重新构建:  ${YELLOW}docker compose up -d --build${NC}"
 echo ""
 echo -e "${RED}重要提醒:${NC}"
-echo -e "  1. 确保腾讯云安全组已开放 80 和 8190 端口"
-echo -e "  2. 如果 AI 试戴不可用，请检查 DASHSCOPE_API_KEY"
-echo -e "  3. AI 对话功能需要额外部署 OpenClaw Gateway"
+echo -e "  1. 确保腾讯云安全组已开放 80、8190 端口"
+echo -e "  2. AI试戴功能需要有效的 DASHSCOPE_API_KEY"
+echo -e "  3. AI对话功能需要有效的 MIMO_API_KEY"
+echo -e "  4. OpenClaw Gateway 首次启动需下载 npm 包，约1-2分钟"
 echo ""
