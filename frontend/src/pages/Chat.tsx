@@ -57,6 +57,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatRef = useRef<HTMLDivElement>(null);
+  /** 标记 activeKey 是否来自 WS 新建会话（避免清除 WS 消息并重复加载） */
+  const activeKeyFromWsRef = useRef(false);
 
   // WebSocket 流式对话 hook
   const { messages: wsMessages, send, loading, sessionKey, toolCalls, connect, disconnect, clearMessages, setCurrentSessionKey } = useChatWS('user');
@@ -67,7 +69,7 @@ export default function ChatPage() {
   useEffect(() => {
     loadSessions();
     connect().catch(() => message.warning('AI对话连接失败，请刷新重试'));
-    return () => disconnect();
+    return () => { /* 不 disconnect，保持 WS 连接跨页面存活 */ };
   }, []);
 
   const loadSessions = () => {
@@ -81,6 +83,13 @@ export default function ChatPage() {
   // 加载历史消息
   useEffect(() => {
     if (activeKey) {
+      // 如果 activeKey 是 WS session 事件触发的（新会话），跳过清除和重新加载
+      if (activeKeyFromWsRef.current) {
+        activeKeyFromWsRef.current = false;
+        // 仍需同步 sessionKeyRef 给 WS hook
+        setCurrentSessionKey(activeKey);
+        return;
+      }
       clearMessages();
       setHistoryMessages([]); // 先清空，避免显示旧消息或混杂
       setCurrentSessionKey(activeKey); // 通知 WS 使用该 session_key
@@ -105,6 +114,7 @@ export default function ChatPage() {
   // 当 sessionKey 变化时（新会话创建），更新 activeKey 并刷新会话列表
   useEffect(() => {
     if (sessionKey) {
+      activeKeyFromWsRef.current = true;  // 标记来自 WS，跳过历史重载
       setActiveKey(sessionKey);
       loadSessions();
     }
