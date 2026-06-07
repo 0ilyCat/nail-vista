@@ -119,7 +119,11 @@ export default function ChatPage() {
     if (sessionKey) {
       activeKeyFromWsRef.current = true;  // 标记来自 WS，跳过历史重载
       setActiveKey(sessionKey);
-      loadSessions();
+      // 直接插入到侧边栏，不依赖后端 DB 提交
+      setSessions(prev => {
+        if (prev.some(s => s.session_key === sessionKey)) return prev;
+        return [{ session_key: sessionKey, title: '新对话' }, ...prev];
+      });
     }
   }, [sessionKey]);
 
@@ -263,7 +267,7 @@ export default function ChatPage() {
               locale={{ emptyText: '' }}
               renderItem={(s: any) => (
                 <div
-                  onClick={() => setActiveKey(s.session_key)}
+                  onClick={() => { activeKeyFromWsRef.current = false; setActiveKey(s.session_key); }}
                   style={{
                     cursor: 'pointer',
                     borderRadius: 8,
