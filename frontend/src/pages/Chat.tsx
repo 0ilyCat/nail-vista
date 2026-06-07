@@ -260,9 +260,9 @@ export default function ChatPage() {
               locale={{ emptyText: '' }}
               renderItem={(s: any) => (
                 <div
-                  onClick={() => { if (!loading) setActiveKey(s.session_key); }}
+                  onClick={() => setActiveKey(s.session_key)}
                   style={{
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: 'pointer',
                     borderRadius: 8,
                     padding: '10px 12px',
                     marginBottom: 4,
@@ -274,7 +274,6 @@ export default function ChatPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    opacity: loading ? 0.5 : 1,
                   }}
                   onMouseEnter={e => {
                     if (s.session_key !== activeKey) e.currentTarget.style.background = '#f8f8f8';
