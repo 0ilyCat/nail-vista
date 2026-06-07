@@ -25,6 +25,8 @@ interface GlobalState {
   stream: StreamState;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   minLoadingTimer: ReturnType<typeof setTimeout> | null;
+  /** 会话版本号：clearMessages 后递增，过滤残余 session 事件 */
+  sessionStamp: number;
 }
 
 const globalStates = new Map<string, GlobalState>();
@@ -48,6 +50,7 @@ function getGlobal(agentType: string): GlobalState {
       },
       reconnectTimer: null,
       minLoadingTimer: null,
+      sessionStamp: 0,
     });
   }
   return globalStates.get(agentType)!;
@@ -99,6 +102,7 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   }, [state]);
 
   const sessionKeyRef = useRef<string | null>(state.sessionKey);
+  const stampRef = useRef<number>(state.sessionStamp);
 
   const getToken = useCallback(() => localStorage.getItem('token') || '', []);
 
@@ -183,9 +187,12 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
     switch (type) {
       case 'session':
-        state.sessionKey = data.session_key;
-        sessionKeyRef.current = data.session_key;
-        notify(state);
+        // 仅当 stamp 匹配时才接受，过滤 clearMessages 后的残余事件
+        if (state.sessionStamp === stampRef.current) {
+          state.sessionKey = data.session_key;
+          sessionKeyRef.current = data.session_key;
+          notify(state);
+        }
         break;
 
       case 'thinking': {
@@ -366,6 +373,8 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       hasAssistantMsg: false,
     };
     state.loading = false;
+    state.sessionStamp += 1;  // 递增版本号，过滤残余 session 事件
+    stampRef.current = state.sessionStamp;
     notify(state);
   }, []);
 
@@ -373,6 +382,8 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const setCurrentSessionKey = useCallback((key: string | null) => {
     sessionKeyRef.current = key;
     state.sessionKey = key;
+    state.sessionStamp += 1;  // 递增版本号
+    stampRef.current = state.sessionStamp;
     notify(state);
   }, []);
 
