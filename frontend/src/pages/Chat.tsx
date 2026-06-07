@@ -54,6 +54,7 @@ export default function ChatPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [historyMessages, setHistoryMessages] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -91,7 +92,8 @@ export default function ChatPage() {
         return;
       }
       clearMessages();
-      setHistoryMessages([]); // 先清空，避免显示旧消息或混杂
+      setHistoryMessages([]);
+      setHistoryLoading(true);
       setCurrentSessionKey(activeKey); // 通知 WS 使用该 session_key
       chatAPI.getMessages(activeKey).then(r => {
         const msgs = r.data.messages || [];
@@ -102,10 +104,11 @@ export default function ChatPage() {
         })));
       }).catch(() => {
         setHistoryMessages([]);
-      });
+      }).finally(() => setHistoryLoading(false));
     } else {
       setCurrentSessionKey(null);
       setHistoryMessages([]);
+      setHistoryLoading(false);
     }
   }, [activeKey]);
 
@@ -228,7 +231,7 @@ export default function ChatPage() {
     );
   };
 
-  const hasMessages = allMessages.length > 0 || loading;
+  const hasMessages = allMessages.length > 0 || loading || historyLoading;
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 128px)', margin: '0 auto', maxWidth: 1200 }}>

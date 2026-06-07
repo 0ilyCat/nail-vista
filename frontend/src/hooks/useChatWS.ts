@@ -27,6 +27,8 @@ interface GlobalState {
   minLoadingTimer: ReturnType<typeof setTimeout> | null;
   /** 会话版本号：clearMessages 后递增，过滤残余 session 事件 */
   sessionStamp: number;
+  /** 标记是否已通过 send() 开始新会话（允许接收 session 事件） */
+  expectNewSession: boolean;
 }
 
 const globalStates = new Map<string, GlobalState>();
@@ -51,6 +53,7 @@ function getGlobal(agentType: string): GlobalState {
       reconnectTimer: null,
       minLoadingTimer: null,
       sessionStamp: 0,
+      expectNewSession: false,
     });
   }
   return globalStates.get(agentType)!;
@@ -187,10 +190,11 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
 
     switch (type) {
       case 'session':
-        // 仅当 stamp 匹配时才接受，过滤 clearMessages 后的残余事件
-        if (state.sessionStamp === stampRef.current) {
+        // 只在新会话模式下接受 session 事件（send 后置 expectNewSession=true）
+        if (state.expectNewSession) {
           state.sessionKey = data.session_key;
           sessionKeyRef.current = data.session_key;
+          state.expectNewSession = false;
           notify(state);
         }
         break;
@@ -348,6 +352,10 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
     state.loading = true;
     state.error = null;
     state.messages = [...state.messages, { role: 'user', content: userMessage }];
+    // 无 sessionKey → 新会话，标记等待 session 事件
+    if (!sessionKeyRef.current) {
+      state.expectNewSession = true;
+    }
     notify(state);
 
     state.ws!.send(JSON.stringify({
@@ -373,8 +381,9 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
       hasAssistantMsg: false,
     };
     state.loading = false;
-    state.sessionStamp += 1;  // 递增版本号，过滤残余 session 事件
+    state.sessionStamp += 1;
     stampRef.current = state.sessionStamp;
+    state.expectNewSession = false;  // 重置新会话标记
     notify(state);
   }, []);
 
@@ -382,7 +391,8 @@ export default function useChatWS(agentType: 'user' | 'ops' = 'user') {
   const setCurrentSessionKey = useCallback((key: string | null) => {
     sessionKeyRef.current = key;
     state.sessionKey = key;
-    state.sessionStamp += 1;  // 递增版本号
+    state.expectNewSession = false;  // 切历史会话不期待新 session 事件
+    state.sessionStamp += 1;
     stampRef.current = state.sessionStamp;
     notify(state);
   }, []);
