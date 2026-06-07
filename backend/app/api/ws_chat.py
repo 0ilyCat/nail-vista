@@ -243,6 +243,9 @@ async def _relay_session(websocket: WebSocket, user: User, agent_type: str):
             client_session_key = req.get("session_key")
             if client_session_key:
                 current_session_key = client_session_key
+            else:
+                # 无 session_key → 创建新会话，不复用上一轮遗留的 current_session_key
+                current_session_key = None
 
             logger.info(f"[RELAY] 用户消息 | user={user.id} session={current_session_key} text={text[:50]}")
 
