@@ -1,3 +1,10 @@
+
+
+<div align="center">
+
+# 💅 NailVista — 美甲AI虚拟试戴与智能运营
+
+</div>
 <div align="center">
 
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" />
@@ -9,15 +16,15 @@
 <img src="https://img.shields.io/badge/AI-MiMo_V2.5-FF69B4?style=flat-square&logo=openai&logoColor=white" />
 <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 
-</div>
 
-# 💅 NailVista — 美甲AI虚拟试戴与智能运营
 
 > 🚀 目前项目已上线可在 [http://175.178.224.202/](http://175.178.224.202/) 体验！
 
 > 让用户「所见即所得」，让运营「实时感知趋势」
 
 美团校园 AI Hackathon 大赛 · 龙猫队
+</div>
+
 
 ---
 
@@ -396,6 +403,12 @@ MIT © 2026
 
 ---
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=0ilyCat/nail-vista&type=Date)](https://star-history.com/#0ilyCat/nail-vista&Date)
+
+---
+
 <div align="center">
-<sub>Built with 💅 by 龙猫队 · Powered by OpenClaw & 百炼 AI</sub>
+<sub>Built with 💅 by 龙猫队 · Powered by OpenClaw</sub>
 </div>
