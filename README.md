@@ -40,7 +40,8 @@ NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台
 ---
 
 ## 🎬 演示视频(旧版前端)
-https://github.com/user-attachments/assets/5f4a19a7-d686-4eb8-b89b-99793e3dfc71
+
+https://github.com/user-attachments/assets/9fa0b6b6-b6fa-48f5-ad22-9705ca47dfb3
 
 ---
 
