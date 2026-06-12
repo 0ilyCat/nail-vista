@@ -21,6 +21,8 @@
 
 ## ✨ 项目简介
 
+https://github.com/user-attachments/assets/5f4a19a7-d686-4eb8-b89b-99793e3dfc71
+
 NailVista 是一个**美甲AI虚拟试戴 × 智能运营分析**双引擎平台。
 
 - 💅 **AI虚拟试戴**：上传手部照片 → 选择美甲款式 → 秒级查看试戴效果
