@@ -1,170 +1,325 @@
-from datetime import datetime
-from sqlalchemy import String, Integer, Float, Text, DateTime, JSON, ForeignKey, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+"""
+NailVista 数据库模型 — MySQL 企业级库表设计
+
+核心实体表:
+  users, merchants, nail_styles, nail_tags, style_tags,
+  posts, post_likes, appointments,
+  chat_sessions, chat_messages,
+  tryon_effects, hand_images
+
+关系表:
+  user_favorite_merchants, user_favorite_styles
+"""
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import (
+    Column, Integer, String, Text, Float, Boolean, DateTime,
+    ForeignKey, JSON, Enum as SAEnum, UniqueConstraint, Index
+)
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
+def utcnow():
+    return datetime.now(timezone.utc)
+
+
+def gen_uuid():
+    return uuid.uuid4().hex
+
+
+# ============================================================
+# 用户表
+# ============================================================
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(64), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    nickname = Column(String(128), default="")
+    avatar_url = Column(String(512), default="")
+    phone = Column(String(20), default="")
+    email = Column(String(128), default="")
+    role = Column(String(16), default="user")  # user / merchant / admin
+    bio = Column(Text, default="")
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # 关系
+    posts = relationship("Post", back_populates="author")
+    hand_images = relationship("HandImage", back_populates="user")
+    appointments = relationship("Appointment", back_populates="user", foreign_keys="Appointment.user_id")
+    tryon_effects = relationship("TryonEffect", back_populates="user")
+    favorite_merchants = relationship("UserFavoriteMerchant", back_populates="user")
+    favorite_styles = relationship("UserFavoriteStyle", back_populates="user")
+
+
+# ============================================================
+# 商家表
+# ============================================================
+class Merchant(Base):
+    __tablename__ = "merchants"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False, index=True)
+    description = Column(Text, default="")
+    logo_url = Column(String(512), default="")
+    images = Column(JSON, default=list)  # ["/static/merchants/xxx/1.jpg", ...]
+    city = Column(String(64), default="")
+    district = Column(String(64), default="")
+    address = Column(String(256), default="")
+    business_hours = Column(String(128), default="")
+    phone = Column(String(20), default="")
+    rating = Column(Float, default=5.0)
+    review_count = Column(Integer, default=0)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    tags = Column(JSON, default=list)
+    time_slots = Column(JSON, default=list)  # [{"start":"09:00","end":"10:00","max_bookings":2},...]
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 关联的运营账号
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # 关系
+    styles = relationship("NailStyle", back_populates="merchant")
+    appointments = relationship("Appointment", back_populates="merchant", foreign_keys="Appointment.merchant_id")
+    favorites = relationship("UserFavoriteMerchant", back_populates="merchant")
+
+
+# ============================================================
+# 美甲款式表
+# ============================================================
 class NailStyle(Base):
     __tablename__ = "nail_styles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(200), default="")
-    original_url: Mapped[str] = mapped_column(Text, default="")
-    enhanced_url: Mapped[str] = mapped_column(Text, default="")
-    category: Mapped[str] = mapped_column(String(50), default="")
-    color_tone: Mapped[str] = mapped_column(String(50), default="")
-    tags: Mapped[dict] = mapped_column(JSON, default=list)
-    description: Mapped[str] = mapped_column(Text, default="")
-    popularity: Mapped[int] = mapped_column(Integer, default=0)
-    price: Mapped[float] = mapped_column(Float, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False, index=True)
+    description = Column(Text, default="")
+    image_url = Column(String(512), default="")
+    category = Column(String(64), default="")       # 风格：猫眼/通勤/裸色/极简/手绘/彩绘...
+    color_tone = Column(String(64), default="")     # 色系：粉/红/蓝/绿/黑/白...
+    scene = Column(String(64), default="")          # 场景：约会/通勤/派对/婚礼...
+    nail_shape = Column(String(32), default="")     # 甲型：短甲/长甲/方甲/圆甲/杏仁甲
+    difficulty = Column(String(16), default="medium")  # easy/medium/hard
+    price = Column(Float, default=0.0)
+    original_price = Column(Float, default=0.0)
+    popularity = Column(Float, default=0.0)
+    tryon_count = Column(Integer, default=0)
+    favorite_count = Column(Integer, default=0)
+    merchant_id = Column(Integer, ForeignKey("merchants.id"), nullable=False, index=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # 关系
+    merchant = relationship("Merchant", back_populates="styles")
+    tags = relationship("StyleTag", back_populates="style")
+    posts = relationship("Post", back_populates="style")
+    appointments = relationship("Appointment", back_populates="style")
+    tryon_effects = relationship("TryonEffect", back_populates="style")
+    favorites = relationship("UserFavoriteStyle", back_populates="style")
 
 
+# ============================================================
+# 美甲标签表
+# ============================================================
+class NailTag(Base):
+    __tablename__ = "nail_tags"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), unique=True, nullable=False)
+    tag_type = Column(String(32), default="style")  # style/element/scene/shape
+    created_at = Column(DateTime, default=utcnow)
+
+    styles = relationship("StyleTag", back_populates="tag")
+
+
+class StyleTag(Base):
+    __tablename__ = "style_tags"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    style_id = Column(Integer, ForeignKey("nail_styles.id", ondelete="CASCADE"), nullable=False)
+    tag_id = Column(Integer, ForeignKey("nail_tags.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    style = relationship("NailStyle", back_populates="tags")
+    tag = relationship("NailTag", back_populates="styles")
+
+    __table_args__ = (
+        UniqueConstraint("style_id", "tag_id", name="uq_style_tag"),
+    )
+
+
+# ============================================================
+# 帖子表
+# ============================================================
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(256), nullable=False)
+    content = Column(Text, default="")
+    image_url = Column(String(512), default="")  # 兼容保留，主图
+    images = Column(JSON, default=list)  # 多图: ["path1", "path2", ...]
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    style_id = Column(Integer, ForeignKey("nail_styles.id"), nullable=True)
+    likes_count = Column(Integer, default=0)
+    favorites_count = Column(Integer, default=0)
+    is_official = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # 关系
+    author = relationship("User", back_populates="posts")
+    style = relationship("NailStyle", back_populates="posts")
+    likes = relationship("PostLike", back_populates="post")
+
+    __table_args__ = (
+        Index("idx_posts_created", "created_at"),
+    )
+
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    post = relationship("Post", back_populates="likes")
+
+    __table_args__ = (
+        UniqueConstraint("post_id", "user_id", name="uq_post_user_like"),
+    )
+
+
+# ============================================================
+# 预约记录表
+# ============================================================
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    merchant_id = Column(Integer, ForeignKey("merchants.id"), nullable=False, index=True)
+    style_id = Column(Integer, ForeignKey("nail_styles.id"), nullable=True)
+    service_item = Column(String(256), default="")
+    appointment_time = Column(DateTime, nullable=True)
+    status = Column(String(32), default="pending")  # pending/confirmed/completed/cancelled
+    notes = Column(Text, default="")
+    price = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship("User", back_populates="appointments", foreign_keys=[user_id])
+    merchant = relationship("Merchant", back_populates="appointments", foreign_keys=[merchant_id])
+    style = relationship("NailStyle", back_populates="appointments")
+
+
+# ============================================================
+# AI对话 Session 表
+# ============================================================
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    session_key = Column(String(64), unique=True, default=gen_uuid, index=True)
+    title = Column(String(256), default="新对话")
+    agent_type = Column(String(32), default="user")  # user/dashboard/merchant
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    messages = relationship("ChatMessage", back_populates="session", order_by="ChatMessage.created_at")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(16), nullable=False)  # user / assistant / system
+    content = Column(Text, default="")
+    tool_calls = Column(JSON, nullable=True)
+    thinking = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    session = relationship("ChatSession", back_populates="messages")
+
+
+# ============================================================
+# 试戴效果图表
+# ============================================================
+class TryonEffect(Base):
+    __tablename__ = "tryon_effects"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    hand_image_id = Column(Integer, ForeignKey("hand_images.id"), nullable=True)
+    style_id = Column(Integer, ForeignKey("nail_styles.id"), nullable=False)
+    result_url = Column(String(512), default="")
+    duration_ms = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User", back_populates="tryon_effects")
+    hand_image = relationship("HandImage", back_populates="tryon_effects")
+    style = relationship("NailStyle", back_populates="tryon_effects")
+
+
+# ============================================================
+# 用户上传手图表
+# ============================================================
 class HandImage(Base):
     __tablename__ = "hand_images"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    image_url: Mapped[str] = mapped_column(Text, default="")
-    local_path: Mapped[str] = mapped_column(String(500), default="")
-    skin_tone: Mapped[str] = mapped_column(String(20), default="")
-    hand_type: Mapped[str] = mapped_column(String(20), default="")
-    landmarks: Mapped[dict] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    image_url = Column(String(512), nullable=False)
+    skin_tone = Column(String(32), default="")
+    hand_type = Column(String(32), default="")  # left/right
+    is_preset = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User", back_populates="hand_images")
+    tryon_effects = relationship("TryonEffect", back_populates="hand_image")
 
 
-class TryonRecord(Base):
-    __tablename__ = "tryon_records"
+# ============================================================
+# 用户收藏 — 商家 (逻辑外键)
+# ============================================================
+class UserFavoriteMerchant(Base):
+    __tablename__ = "user_favorite_merchants"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    hand_image_id: Mapped[int] = mapped_column(Integer, ForeignKey("hand_images.id"), nullable=True)
-    nail_style_id: Mapped[int] = mapped_column(Integer, ForeignKey("nail_styles.id"), nullable=True)
-    result_url: Mapped[str] = mapped_column(Text, default="")
-    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    merchant_id = Column(Integer, ForeignKey("merchants.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
 
+    user = relationship("User", back_populates="favorite_merchants")
+    merchant = relationship("Merchant", back_populates="favorites")
 
-class StyleMetrics(Base):
-    __tablename__ = "style_metrics"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    style_id: Mapped[int] = mapped_column(Integer, ForeignKey("nail_styles.id"))
-    date: Mapped[datetime] = mapped_column(DateTime)
-    views: Mapped[int] = mapped_column(Integer, default=0)
-    tryons: Mapped[int] = mapped_column(Integer, default=0)
-    favorites: Mapped[int] = mapped_column(Integer, default=0)
-    shares: Mapped[int] = mapped_column(Integer, default=0)
-    orders: Mapped[int] = mapped_column(Integer, default=0)
-    refunds: Mapped[int] = mapped_column(Integer, default=0)
-    avg_duration: Mapped[int] = mapped_column(Integer, default=0)
-    hot_score: Mapped[float] = mapped_column(Float, default=0.0)
+    __table_args__ = (
+        UniqueConstraint("user_id", "merchant_id", name="uq_user_merchant_fav"),
+    )
 
 
-# ── Operations tables (Meituan-style dashboard) ──────────────
+# ============================================================
+# 用户收藏 — 美甲款式 (逻辑外键)
+# ============================================================
+class UserFavoriteStyle(Base):
+    __tablename__ = "user_favorite_styles"
 
-class Order(Base):
-    """订单表 — 模拟美团美甲店铺真实订单"""
-    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    style_id = Column(Integer, ForeignKey("nail_styles.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    order_no: Mapped[str] = mapped_column(String(32), unique=True, default="")
-    style_id: Mapped[int] = mapped_column(Integer, ForeignKey("nail_styles.id"), nullable=True)
-    user_id: Mapped[str] = mapped_column(String(32), default="")
-    amount: Mapped[float] = mapped_column(Float, default=0.0)       # 实付金额
-    original_amount: Mapped[float] = mapped_column(Float, default=0.0)  # 原价
-    coupon_discount: Mapped[float] = mapped_column(Float, default=0.0)  # 优惠券抵扣
-    status: Mapped[str] = mapped_column(String(20), default="paid")  # paid/refunded/partial_refund
-    payment_method: Mapped[str] = mapped_column(String(20), default="wechat")
-    is_new_customer: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    user = relationship("User", back_populates="favorite_styles")
+    style = relationship("NailStyle", back_populates="favorites")
 
-
-class Refund(Base):
-    """退款表"""
-    __tablename__ = "refunds"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=True)
-    amount: Mapped[float] = mapped_column(Float, default=0.0)
-    reason: Mapped[str] = mapped_column(String(200), default="")
-    status: Mapped[str] = mapped_column(String(20), default="completed")  # pending/approved/completed/rejected
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-
-
-class Review(Base):
-    """用户评价表"""
-    __tablename__ = "reviews"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(Integer, ForeignKey("orders.id"), nullable=True)
-    style_id: Mapped[int] = mapped_column(Integer, ForeignKey("nail_styles.id"), nullable=True)
-    user_id: Mapped[str] = mapped_column(String(32), default="")
-    rating: Mapped[int] = mapped_column(Integer, default=5)             # 1-5 星
-    tags: Mapped[str] = mapped_column(String(200), default="")          # 效果好评/服务好/性价比高
-    comment: Mapped[str] = mapped_column(Text, default="")
-    has_photo: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-
-
-class DailyRevenue(Base):
-    """每日营收汇总"""
-    __tablename__ = "daily_revenue"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime, unique=True)
-    gross_revenue: Mapped[float] = mapped_column(Float, default=0.0)    # 总营收
-    net_revenue: Mapped[float] = mapped_column(Float, default=0.0)      # 净营收(扣退款)
-    order_count: Mapped[int] = mapped_column(Integer, default=0)        # 订单数
-    refund_amount: Mapped[float] = mapped_column(Float, default=0.0)    # 退款金额
-    refund_count: Mapped[int] = mapped_column(Integer, default=0)       # 退款单数
-    new_customer_orders: Mapped[int] = mapped_column(Integer, default=0)  # 新客订单
-    repeat_customer_orders: Mapped[int] = mapped_column(Integer, default=0)  # 老客订单
-    coupon_discount_total: Mapped[float] = mapped_column(Float, default=0.0)  # 优惠券总抵扣
-    avg_order_value: Mapped[float] = mapped_column(Float, default=0.0)  # 客单价
-
-
-class TrafficMetrics(Base):
-    """流量数据"""
-    __tablename__ = "traffic_metrics"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime)
-    exposure: Mapped[int] = mapped_column(Integer, default=0)           # 曝光量
-    click: Mapped[int] = mapped_column(Integer, default=0)              # 点击/进店
-    visit: Mapped[int] = mapped_column(Integer, default=0)              # 浏览UV
-    order_conversion: Mapped[int] = mapped_column(Integer, default=0)   # 下单转化数
-    ctr: Mapped[float] = mapped_column(Float, default=0.0)              # 点击率(%)
-    cvr: Mapped[float] = mapped_column(Float, default=0.0)              # 转化率(%)
-    source: Mapped[str] = mapped_column(String(30), default="organic")  # organic/ad/search/recommend
-
-
-class CouponUsage(Base):
-    """优惠券使用"""
-    __tablename__ = "coupon_usage"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(DateTime)
-    issued: Mapped[int] = mapped_column(Integer, default=0)             # 发放数
-    used: Mapped[int] = mapped_column(Integer, default=0)               # 核销数
-    discount_total: Mapped[float] = mapped_column(Float, default=0.0)   # 总优惠金额
-    usage_rate: Mapped[float] = mapped_column(Float, default=0.0)       # 核销率(%)
-    campaign: Mapped[str] = mapped_column(String(50), default="新人券")  # 活动名称
-
-
-class OperationsReport(Base):
-    __tablename__ = "operations_reports"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    report_type: Mapped[str] = mapped_column(String(50))
-    content: Mapped[str] = mapped_column(Text, default="")
-    metrics: Mapped[dict] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-
-
-class UserFeedback(Base):
-    __tablename__ = "user_feedback"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    tryon_id: Mapped[int] = mapped_column(Integer, ForeignKey("tryon_records.id"), nullable=True)
-    rating: Mapped[int] = mapped_column(Integer, default=0)
-    comment: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    __table_args__ = (
+        UniqueConstraint("user_id", "style_id", name="uq_user_style_fav"),
+    )

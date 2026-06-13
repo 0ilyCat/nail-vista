@@ -1,101 +1,77 @@
-import json
-from pathlib import Path
+"""
+NailVista 鏍稿績閰嶇疆
+鏀寔 .env 鏂囦欢鍜岀幆澧冨彉閲忔敞鍏?
+"""
+from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
+from pathlib import Path
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
-    # App
+    # 搴旂敤
     APP_NAME: str = "NailVista"
     DEBUG: bool = True
+    API_PREFIX: str = "/api"
 
-    # Database
-    USE_POSTGRES: bool = False
-    DATABASE_URL: str = ""
-    PG_HOST: str = "localhost"
-    PG_PORT: int = 5432
-    PG_USER: str = "postgres"
-    PG_PASSWORD: str = "postgres"
-    PG_DB: str = "nail_tryon"
+    # 鏁版嵁搴?(MySQL)
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 3306
+    DB_USER: str = "root"
+    DB_PASSWORD: str = ""
+    DB_NAME: str = "nail_vista"
+    DATABASE_URL: Optional[str] = None
 
-    # 百炼 API（仅图像生成，只在 .env 配置）
-    DASHSCOPE_API_KEY: str = ""
+    # JWT
+    JWT_SECRET_KEY: str = "nailvista-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
-    # OpenClaw Gateway（优先读 .env，未配置时自动从 openclaw.json 加载）
-    OPENCLAW_BASE_URL: str = "http://127.0.0.1:18789"
-    OPENCLAW_GATEWAY_TOKEN: str = ""
-
-    # MediaPipe
-    MEDIAPIPE_MAX_HANDS: int = 1
-    MEDIAPIPE_CONFIDENCE: float = 0.5
-
-    # Image storage
-    UPLOAD_DIR: str = "uploads"
-    RESULT_DIR: str = "results"
+    # 鏂囦欢涓婁紶
     STATIC_DIR: str = "static"
+    UPLOAD_DIR: str = "static"
+    RESULT_DIR: str = "static/results"
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:4180", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:4180",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "extra": "ignore",
-    }
+    # OpenClaw AI Gateway
+    OPENCLAW_BASE_URL: str = "http://127.0.0.1:18789"
+    OPENCLAW_GATEWAY_TOKEN: str = "nailvista-dev-token"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._load_openclaw_config()
+    # Gateway WebSocket 閲嶈繛涓庤秴鏃堕厤缃?
+    OPENCLAW_WS_RECONNECT_DELAY: int = 5        # 断线重连间隔(秒)
+    OPENCLAW_WS_RECONNECT_MAX_RETRIES: int = 12 # 最大重连次数(12×5s=60s)
+    OPENCLAW_WS_REQUEST_TIMEOUT: int = 300       # 鍗曟璇锋眰瓒呮椂(绉?
 
-    def _load_openclaw_config(self):
-        """自动从项目根目录的 .openclaw/openclaw.json 读取 Gateway 配置"""
-        project_root = Path(__file__).parent.parent.parent.parent
-        config_path = project_root / ".openclaw" / "openclaw.json"
-        if not config_path.exists():
-            return
+    # 闃块噷鐧剧偧鍥剧敓妯″瀷 (AI璇曟埓)
+    DASHSCOPE_API_KEY: str = ""
 
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                raw = f.read()
-            # 移除 JSON 不支持的行注释
-            import re
-            # 仅移除整行注释（以空白开头后跟 // 的行）
-            raw = re.sub(r'^\s*//.*$', '', raw, flags=re.MULTILINE)
-            oc = json.loads(raw)
+    # 鏈湴鍥剧墖瀛樺偍 (鍥剧墖閫氳繃 /api/getImg?name= 璁块棶)
+    IMAGE_BASE_URL: str = ""  # 鐣欑┖锛屽墠绔娇鐢ㄧ浉瀵硅矾寰?/api/getImg
 
-            # 读取 env 段中的变量定义
-            env_vars = oc.get("env", {})
-
-            def resolve(value):
-                """解析 ${VAR} 引用"""
-                if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
-                    var_name = value[2:-1]
-                    return env_vars.get(var_name, value)
-                return value
-
-            gateway = oc.get("gateway", {})
-            port = gateway.get("port", 18789)
-            auth = gateway.get("auth", {})
-            token = resolve(auth.get("token", ""))
-
-            if not self.OPENCLAW_BASE_URL or self.OPENCLAW_BASE_URL == "http://127.0.0.1:18789":
-                self.OPENCLAW_BASE_URL = f"http://127.0.0.1:{port}"
-            if not self.OPENCLAW_GATEWAY_TOKEN and token:
-                self.OPENCLAW_GATEWAY_TOKEN = token
-        except Exception:
-            pass
-
-    def get_database_url(self) -> str:
+    @property
+    def database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        if self.USE_POSTGRES:
-            return (
-                f"postgresql+asyncpg://{self.PG_USER}:{self.PG_PASSWORD}"
-                f"@{self.PG_HOST}:{self.PG_PORT}/{self.PG_DB}"
-            )
-        db_path = Path(__file__).parent.parent.parent / "nail_tryon.db"
-        return f"sqlite+aiosqlite:///{db_path}"
+        # URL-encode the password so special characters do not break the MySQL URL.
+        encoded_pw = quote_plus(self.DB_PASSWORD)
+        return f"mysql+aiomysql://{self.DB_USER}:{encoded_pw}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def static_path(self) -> Path:
+        base = Path(__file__).parent.parent.parent
+        return base / self.STATIC_DIR
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
-def get_settings() -> Settings:
-    return Settings()
+settings = Settings()
+

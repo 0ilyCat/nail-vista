@@ -1,583 +1,684 @@
-"""Chat API with SSE streaming, session management, and task scheduling"""
+"""
+小美对话 API — HTTP 端点（历史会话、管理）+ WebSocket 端点见 ws_chat.py
+"""
 import json
 import uuid
-import asyncio
-import logging
-from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Request
+
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
-from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
 import httpx
 
-from app.core.database import get_db
-from app.core.config import get_settings
-from app.models.chat import ChatSession, ChatMessage, ScheduledTask
-from app.services.skill_router import detect_skill, execute_skill, format_skill_context
+from app.core.database import get_db, async_session_factory
+from app.core.config import settings
+from app.core.logger import get_logger
+from app.models.models import User, ChatSession, ChatMessage
+from app.schemas.schemas import ChatRequest, ChatSessionOut, ChatMessageOut
+from app.api.auth import get_current_user
+from app.services.skill_router import SKILLS, execute_skill_dynamic
 
 router = APIRouter()
-settings = get_settings()
-logger = logging.getLogger("nailvista.chat")
-
-# OpenClaw Gateway config（每次调用时实时读取，避免模块缓存过期）
-def _get_openclaw_base() -> str:
-    return get_settings().OPENCLAW_BASE_URL.rstrip("/")
-
-def _get_openclaw_token() -> str:
-    return get_settings().OPENCLAW_GATEWAY_TOKEN
-
-
-class ChatRequest(BaseModel):
-    session_key: Optional[str] = Field(default=None, description="前端会话标识，为空则创建新会话")
-    message: str = Field(..., min_length=1, max_length=4000)
-    image_url: Optional[str] = Field(default=None, description="可选的图片 URL（用于多模态评价）")
-
-
-class ChatResponse(BaseModel):
-    session_key: str
-    reply: str
-    tool_calls: list = []
-    thinking: Optional[str] = None
-
-
-class TaskCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=128)
-    task_type: str = Field(..., pattern="^(daily_report|trend_analysis|hot_ranking)$")
-    cron_expr: str = Field(..., min_length=1, max_length=64)
-
-
-class TaskResponse(BaseModel):
-    id: int
-    name: str
-    task_type: str
-    cron_expr: str
-    is_active: bool
-    last_run_at: Optional[datetime] = None
-    created_at: datetime
-
-
-# ──────────────────────── Helpers ────────────────────────
-
-def _map_agent(agent_type: str) -> tuple[str, str]:
-    """Map frontend agent_type to OpenClaw agent ID"""
-    if agent_type == "user":
-        return "nailvista-xiaomei", "openclaw/nailvista-xiaomei"
-    return "nailvista-ops", "openclaw/nailvista-ops"
-
-
-async def _get_or_create_session(
-    db: AsyncSession, session_key: Optional[str], agent_type: str
-) -> ChatSession:
-    if session_key:
-        result = await db.execute(
-            select(ChatSession).where(ChatSession.session_key == session_key)
-        )
-        session = result.scalar_one_or_none()
-        if session:
-            session.updated_at = datetime.utcnow()
-            await db.commit()
-            return session
-
-    new_key = uuid.uuid4().hex[:16]
-    session = ChatSession(
-        session_key=new_key,
-        agent_type=agent_type,
-        title="新对话",
-    )
-    db.add(session)
-    await db.commit()
-    await db.refresh(session)
-    return session
-
-
-async def _get_history(db: AsyncSession, session_id: int) -> list[dict]:
-    result = await db.execute(
-        select(ChatMessage)
-        .where(ChatMessage.session_id == session_id)
-        .order_by(ChatMessage.created_at)
-    )
-    messages = result.scalars().all()
-    history = []
-    for m in messages:
-        history.append({"role": m.role, "content": m.content})
-    return history
-
-
-async def _save_message(
-    db: AsyncSession,
-    session_id: int,
-    role: str,
-    content: str,
-    tool_calls: list = None,
-    thinking: str = None,
-) -> ChatMessage:
-    msg = ChatMessage(
-        session_id=session_id,
-        role=role,
-        content=content,
-        tool_calls=tool_calls,
-        thinking=thinking,
-    )
-    db.add(msg)
-    await db.commit()
-    return msg
-
-
-# ──────────────────────── SSE Streaming ────────────────────────
-
-async def _stream_chat(
-    agent_type: str,
-    session_key: str,
-    message: str,
-    image_url: Optional[str],
-    db: AsyncSession,
-):
-    """Core SSE streaming logic — proxies OpenClaw and formats events"""
-    agent_id, model_name = _map_agent(agent_type)
-
-    logger.info(f"[STREAM] agent={agent_type}({agent_id}) model={model_name} | msg={message[:80]} | image={bool(image_url)}")
-
-    # Save user message
-    session = await _get_or_create_session(db, session_key, agent_type)
-    await _save_message(db, session.id, "user", message)
-
-    # Auto-title: use first user message as session title
-    if session.title == "新对话":
-        title_text = message.replace("\n", " ").strip()[:30]
-        session.title = title_text if title_text else "新对话"
-        await db.commit()
-
-    # ── Skill detection & execution ──
-    skill = await detect_skill(message, agent_type)
-    skill_context = ""
-    if skill:
-        skill_desc = skill["description"]
-        skill_name_val = skill["name"]
-        logger.info(f"[SKILL] detected={skill_name_val} | agent={agent_type}")
-        yield f"data: {json.dumps({'type': 'skill_start', 'name': skill_name_val, 'description': f'🔍 正在使用 {skill_desc}...'}, ensure_ascii=False)}\n\n"
-        skill_result = await execute_skill(skill, message, db)
-        if skill_result.get("success"):
-            skill_context = format_skill_context(skill_result, skill_name_val)
-            logger.info(f"[SKILL] success={skill_name_val} | context_len={len(skill_context)}")
-            yield f"data: {json.dumps({'type': 'skill_end', 'name': skill_name_val, 'result': '✅ 数据查询完成'}, ensure_ascii=False)}\n\n"
-        else:
-            err_msg = skill_result.get("error", "未知错误")
-            logger.error(f"[SKILL] failed={skill_name_val} | error={err_msg}")
-            yield f"data: {json.dumps({'type': 'skill_end', 'name': skill_name_val, 'result': f'⚠️ {err_msg}'}, ensure_ascii=False)}\n\n"
-    else:
-        logger.info(f"[SKILL] none detected | agent={agent_type}")
-
-    # Build messages array with history
-    history = await _get_history(db, session.id)
-    if len(history) > 20:
-        history = history[-20:]
-
-    # Construct request to OpenClaw
-    openclaw_messages = history.copy()
-
-    # Inject skill context as system message
-    if skill_context:
-        openclaw_messages.insert(0, {"role": "system", "content": skill_context})
-
-    if image_url:
-        openclaw_messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": message},
-                {"type": "image_url", "image_url": {"url": image_url}},
-            ],
-        })
-    else:
-        openclaw_messages.append({"role": "user", "content": message})
-
-    headers = {"Content-Type": "application/json"}
-    if _get_openclaw_token():
-        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
-    headers["x-openclaw-agent"] = agent_id
-
-    payload = {
-        "model": model_name,
-        "messages": openclaw_messages,
-        "stream": True,
-    }
-
-    # Yield session_key first so frontend can bind
-    yield f"data: {json.dumps({'type': 'session', 'session_key': session.session_key}, ensure_ascii=False)}\n\n"
-
-    full_reply = ""
-    tool_calls = []
-    thinking = ""
-    current_tool = None
-    is_thinking = False
-
-    try:
-        logger.info(f"[OPENCLAW] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(openclaw_messages)}")
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            async with client.stream(
-                "POST",
-                f"{_get_openclaw_base()}/v1/chat/completions",
-                json=payload,
-                headers=headers,
-            ) as response:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    error_preview = error_text.decode("utf-8", errors="replace")[:500]
-                    logger.error(f"[OPENCLAW] HTTP {response.status_code} | agent={agent_id} | body={error_preview}")
-                    yield f"data: {json.dumps({'type': 'error', 'message': f'OpenClaw error: {response.status_code}'}, ensure_ascii=False)}\n\n"
-                    return
-
-                logger.info(f"[OPENCLAW] stream started | agent={agent_id}")
-
-                buffer = ""
-                async for chunk in response.aiter_bytes():
-                    buffer += chunk.decode("utf-8", errors="replace")
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        line = line.strip()
-                        if not line or not line.startswith("data: "):
-                            continue
-
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-
-                        try:
-                            data = json.loads(data_str)
-                        except json.JSONDecodeError:
-                            continue
-
-                        choices = data.get("choices", [])
-                        if not choices:
-                            continue
-
-                        delta = choices[0].get("delta", {})
-
-                        # Thinking / reasoning_content
-                        thinking_content = delta.get("reasoning_content", "")
-                        if thinking_content:
-                            thinking += thinking_content
-                            yield f"data: {json.dumps({'type': 'thinking', 'content': thinking_content}, ensure_ascii=False)}\n\n"
-
-                        # Text content
-                        content = delta.get("content", "")
-                        if content:
-                            full_reply += content
-                            yield f"data: {json.dumps({'type': 'text', 'content': content}, ensure_ascii=False)}\n\n"
-
-                        # Tool calls (if OpenClaw uses native tool calling)
-                        tc_delta = delta.get("tool_calls")
-                        if tc_delta:
-                            for tc in tc_delta:
-                                tc_id = tc.get("id", "")
-                                func = tc.get("function", {})
-                                name = func.get("name", "")
-                                args = func.get("arguments", "")
-
-                                if tc_id and not current_tool:
-                                    current_tool = {"id": tc_id, "name": name, "input": args, "output": ""}
-                                    # Try to parse args for display
-                                    try:
-                                        args_obj = json.loads(args) if args else {}
-                                        args_str = json.dumps(args_obj, ensure_ascii=False)[:200]
-                                    except Exception:
-                                        args_str = args[:200]
-                                    yield f"data: {json.dumps({'type': 'tool_start', 'id': tc_id, 'name': name, 'description': f'正在调用 {name}', 'input': args_str}, ensure_ascii=False)}\n\n"
-                                elif current_tool and args:
-                                    current_tool["input"] += args
-
-    except httpx.ConnectError as e:
-        logger.error(f"[OPENCLAW] Connection refused: {_get_openclaw_base()} | {e}")
-        yield f"data: {json.dumps({'type': 'error', 'message': '无法连接到 AI 服务，请确认 OpenClaw Gateway 已启动'}, ensure_ascii=False)}\n\n"
-        return
-    except Exception as e:
-        import traceback
-        logger.error(f"[STREAM] Unexpected error: {type(e).__name__}: {e}")
-        logger.error(traceback.format_exc())
-        yield f"data: {json.dumps({'type': 'error', 'message': f'AI 服务异常: {str(e)}'}, ensure_ascii=False)}\n\n"
-        return
-
-    # Close current tool if any
-    if current_tool:
-        tool_calls.append(current_tool)
-        yield f"data: {json.dumps({'type': 'tool_end', 'id': current_tool['id'], 'result': current_tool.get('output', '') or '完成'}, ensure_ascii=False)}\n\n"
-
-    # Save assistant message
-    if full_reply:
-        await _save_message(db, session.id, "assistant", full_reply, tool_calls, thinking)
-
-    logger.info(f"[STREAM] done | agent={agent_type} | reply_len={len(full_reply)} | tools={len(tool_calls)} | thinking_len={len(thinking)}")
-    # Done
-    yield f"data: {json.dumps({'type': 'done', 'session_key': session.session_key}, ensure_ascii=False)}\n\n"
-
-
-# ──────────────────────── Endpoints ────────────────────────
-
-@router.post("/user")
-async def chat_user(req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """用户侧聊天（非流式，返回完整回复）"""
-    logger.info(f"[USER] msg={req.message[:80]} | session={req.session_key} | image={bool(req.image_url)}")
-    session = await _get_or_create_session(db, req.session_key, "user")
-    await _save_message(db, session.id, "user", req.message)
-    if session.title == "新对话":
-        title_text = req.message.replace("\n", " ").strip()[:30]
-        session.title = title_text if title_text else "新对话"
-        await db.commit()
-
-    agent_id, model_name = _map_agent("user")
-    history = await _get_history(db, session.id)
-    if len(history) > 20:
-        history = history[-20:]
-
-    messages = history.copy()
-
-    # Skill detection
-    skill = await detect_skill(req.message, "user")
-    if skill:
-        skill_result = await execute_skill(skill, req.message, db)
-        if skill_result.get("success"):
-            skill_context = format_skill_context(skill_result, skill["name"])
-            messages.insert(0, {"role": "system", "content": skill_context})
-
-    if req.image_url:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": req.message},
-                {"type": "image_url", "image_url": {"url": req.image_url}},
-            ],
-        })
-    else:
-        messages.append({"role": "user", "content": req.message})
-
-    headers = {"Content-Type": "application/json"}
-    if _get_openclaw_token():
-        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
-    headers["x-openclaw-agent"] = agent_id
-
-    try:
-        logger.info(f"[NON-STREAM] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(messages)}")
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(
-                f"{_get_openclaw_base()}/v1/chat/completions",
-                json={"model": model_name, "messages": messages, "stream": False},
-                headers=headers,
-            )
-            if resp.status_code != 200:
-                error_body = resp.text[:500]
-                logger.error(f"[NON-STREAM] OpenClaw HTTP {resp.status_code}: {error_body}")
-                raise HTTPException(status_code=502, detail=f"OpenClaw error: {resp.status_code}")
-
-            data = resp.json()
-            reply = data["choices"][0]["message"]["content"]
-            logger.info(f"[NON-STREAM] reply_len={len(reply)} | session={session.session_key}")
-
-            await _save_message(db, session.id, "assistant", reply)
-            return ChatResponse(session_key=session.session_key, reply=reply)
-
-    except httpx.ConnectError as e:
-        logger.error(f"[NON-STREAM] Connection refused: {_get_openclaw_base()} | {e}")
-        raise HTTPException(status_code=503, detail="AI 服务不可用，请确认 OpenClaw Gateway 已启动")
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        logger.error(f"[NON-STREAM] Unexpected: {type(e).__name__}: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"AI 服务异常: {str(e)}")
-
-
-@router.post("/user/stream")
-async def chat_user_stream(req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """用户侧聊天（SSE 流式）"""
-    return StreamingResponse(
-        _stream_chat("user", req.session_key, req.message, req.image_url, db),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@router.post("/dashboard")
-async def chat_dashboard(req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """运营侧聊天（非流式）"""
-    session = await _get_or_create_session(db, req.session_key, "dashboard")
-    await _save_message(db, session.id, "user", req.message)
-    if session.title == "新对话":
-        title_text = req.message.replace("\n", " ").strip()[:30]
-        session.title = title_text if title_text else "新对话"
-        await db.commit()
-
-    agent_id, model_name = _map_agent("dashboard")
-    history = await _get_history(db, session.id)
-    if len(history) > 20:
-        history = history[-20:]
-
-    messages = history.copy()
-
-    # Skill detection
-    skill = await detect_skill(req.message, "dashboard")
-    if skill:
-        skill_result = await execute_skill(skill, req.message, db)
-        if skill_result.get("success"):
-            skill_context = format_skill_context(skill_result, skill["name"])
-            messages.insert(0, {"role": "system", "content": skill_context})
-
-    messages.append({"role": "user", "content": req.message})
-
-    headers = {"Content-Type": "application/json"}
-    if _get_openclaw_token():
-        headers["Authorization"] = f"Bearer {_get_openclaw_token()}"
-    headers["x-openclaw-agent"] = agent_id
-
-    try:
-        logger.info(f"[NON-STREAM] POST {_get_openclaw_base()}/v1/chat/completions | agent={agent_id} | msgs={len(messages)}")
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(
-                f"{_get_openclaw_base()}/v1/chat/completions",
-                json={"model": model_name, "messages": messages, "stream": False},
-                headers=headers,
-            )
-            if resp.status_code != 200:
-                error_body = resp.text[:500]
-                logger.error(f"[NON-STREAM] OpenClaw HTTP {resp.status_code}: {error_body}")
-                raise HTTPException(status_code=502, detail=f"OpenClaw error: {resp.status_code}")
-
-            data = resp.json()
-            reply = data["choices"][0]["message"]["content"]
-            logger.info(f"[NON-STREAM] reply_len={len(reply)} | session={session.session_key}")
-
-            await _save_message(db, session.id, "assistant", reply)
-            return ChatResponse(session_key=session.session_key, reply=reply)
-
-    except httpx.ConnectError as e:
-        logger.error(f"[NON-STREAM] Connection refused: {_get_openclaw_base()} | {e}")
-        raise HTTPException(status_code=503, detail="AI 服务不可用，请确认 OpenClaw Gateway 已启动")
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        logger.error(f"[NON-STREAM] Unexpected: {type(e).__name__}: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"AI 服务异常: {str(e)}")
-
-
-@router.post("/dashboard/stream")
-async def chat_dashboard_stream(req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """运营侧聊天（SSE 流式）"""
-    return StreamingResponse(
-        _stream_chat("dashboard", req.session_key, req.message, req.image_url, db),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-# ──────────────────────── Session Management ────────────────────────
-
-@router.get("/sessions")
-async def list_sessions(agent_type: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    """获取会话列表"""
-    query = select(ChatSession).order_by(ChatSession.updated_at.desc()).limit(50)
-    if agent_type:
-        query = query.where(ChatSession.agent_type == agent_type)
-    result = await db.execute(query)
-    sessions = result.scalars().all()
-    return {
-        "sessions": [
-            {
-                "id": s.id,
-                "session_key": s.session_key,
-                "agent_type": s.agent_type,
-                "title": s.title,
-                "created_at": s.created_at.isoformat(),
-                "updated_at": s.updated_at.isoformat(),
+logger = get_logger("chat")
+
+MAX_REACT_ROUNDS = 5  # 最大工具调用轮数
+
+
+# ── 工具定义（OpenAI function-calling 格式） ──
+
+CHAT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_nail_styles",
+            "description": "搜索美甲款式，按分类、颜色、关键词筛选。用户说'找红色猫眼'、'搜索渐变'时调用",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string", "description": "搜索关键词，如'猫眼'、'法式'、'红色'"},
+                    "category": {"type": "string", "description": "分类，如'猫眼'、'渐变'、'纯色'、'法式'"},
+                    "sort": {"type": "string", "enum": ["popular", "newest", "name"], "description": "排序方式"},
+                    "limit": {"type": "integer", "description": "返回数量，默认8"}
+                },
+                "required": []
             }
-            for s in sessions
-        ]
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recommend_nail_styles",
+            "description": "根据用户偏好（场合、肤色、风格）智能推荐美甲款式。用户说'推荐适合约会的美甲'、'我皮肤偏黄适合什么颜色'时调用",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "occasion": {"type": "string", "description": "场合：约会/通勤/派对/日常/婚礼"},
+                    "skin_tone": {"type": "string", "description": "肤色：白皙/偏黄/偏黑"},
+                    "style": {"type": "string", "description": "风格偏好：温柔甜美/简约高级/闪亮抢眼/个性"},
+                    "limit": {"type": "integer", "description": "返回数量，默认6"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_nail_categories",
+            "description": "获取美甲款式分类列表。用户问'有哪些种类'、'分类'时调用",
+            "parameters": {"type": "object", "properties": {}, "required": []}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "evaluate_tryon_image",
+            "description": "评价美甲试戴效果图（多模态）。当用户发送试戴图片要求评价时调用",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "image_url": {"type": "string", "description": "试戴效果图片的URL"},
+                    "aspects": {"type": "array", "items": {"type": "string"}, "description": "评价维度：color/style/beauty/detail"}
+                },
+                "required": ["image_url"]
+            }
+        }
+    },
+]
+
+OPERATIONS_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_ops_overview",
+            "description": "获取今日运营概览数据（试戴量、营收、订单、评分、流量等）",
+            "parameters": {"type": "object", "properties": {}, "required": []}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_revenue_data",
+            "description": "获取营收趋势数据。可按天数过滤",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7，可选7/14/30"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_hot_styles",
+            "description": "获取热门款式排行TOP榜",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "返回数量，默认10"},
+                    "days": {"type": "integer", "description": "统计天数，默认7"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_trend_data",
+            "description": "获取趋势数据（试戴量、浏览量、收藏量、订单量变化）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7，可选7/14/30"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_refund_analysis",
+            "description": "获取退款分析数据（退款率、退款原因分布）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_review_analysis",
+            "description": "获取评价分析数据（评分分布、热门标签）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_traffic_analysis",
+            "description": "获取流量分析数据（曝光、点击、转化漏斗）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7"}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_customer_analysis",
+            "description": "获取顾客分析数据（新老客占比）",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {"type": "integer", "description": "查询天数，默认7"}
+                },
+                "required": []
+            }
+        }
+    },
+]
+
+
+@router.post("/chat/user")
+async def chat_user(
+    body: ChatRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """用户端AI对话 — React范式"""
+    logger.info(f"[chat] 用户对话 | user={user.id} session={body.session_key} msg={body.message[:50]}")
+
+    session = await _get_or_create_session(db, user.id, body.session_key)
+    user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
+    db.add(user_msg)
+    await db.flush()
+
+    if not session.title or session.title == "新对话":
+        session.title = body.message[:30]
+        logger.info(f"[chat] 自动标题 | title={session.title}")
+
+    history = await _get_history(db, session.id, 20)
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+
+    # React循环：多轮工具调用
+    result = await _react_loop(messages, "user", db)
+
+    # 保存助手消息
+    assistant_msg = ChatMessage(
+        session_id=session.id, role="assistant",
+        content=result["content"],
+        thinking=json.dumps(result.get("thinking_steps", []), ensure_ascii=False),
+        tool_calls=json.dumps(result.get("tool_call_trace", []), ensure_ascii=False),
+    )
+    db.add(assistant_msg)
+    await db.flush()
+
+    logger.info(f"[chat] 对话完成 | session={session.session_key} rounds={result.get('rounds',0)} reply_len={len(result['content'])}")
+
+    return {
+        "session_key": session.session_key,
+        "message": {
+            "role": "assistant",
+            "content": assistant_msg.content,
+            "thinking": assistant_msg.thinking,
+            "tool_calls": result.get("tool_call_trace", []),
+        },
     }
 
 
-@router.get("/sessions/{session_key}")
-async def get_session_messages(session_key: str, db: AsyncSession = Depends(get_db)):
-    """获取指定会话的消息历史"""
-    result = await db.execute(
-        select(ChatSession).where(ChatSession.session_key == session_key)
+@router.post("/chat/ops")
+async def chat_ops(
+    body: ChatRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """运营端AI对话 — React范式"""
+    logger.info(f"[chat-ops] 运营对话 | user={user.id} msg={body.message[:50]}")
+
+    if user.role != "merchant":
+        raise HTTPException(status_code=403, detail="仅商家可访问运营助手")
+
+    session = await _get_or_create_session(db, user.id, body.session_key, agent_type="ops")
+    user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
+    db.add(user_msg)
+    await db.flush()
+
+    if not session.title or session.title == "新对话":
+        session.title = body.message[:30]
+
+    history = await _get_history(db, session.id, 20)
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+
+    result = await _react_loop(messages, "ops", db)
+
+    assistant_msg = ChatMessage(
+        session_id=session.id, role="assistant",
+        content=result["content"],
+        thinking=json.dumps(result.get("thinking_steps", []), ensure_ascii=False),
+        tool_calls=json.dumps(result.get("tool_call_trace", []), ensure_ascii=False),
     )
-    session = result.scalar_one_or_none()
+    db.add(assistant_msg)
+    await db.flush()
+
+    return {
+        "session_key": session.session_key,
+        "message": {
+            "role": "assistant",
+            "content": assistant_msg.content,
+            "thinking": assistant_msg.thinking,
+            "tool_calls": result.get("tool_call_trace", []),
+        },
+    }
+
+
+@router.post("/chat/user/stream")
+async def chat_user_stream(
+    body: ChatRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """用户端AI对话 — SSE流式"""
+    logger.info(f"[chat-stream] 流式对话 | user={user.id} session={body.session_key}")
+
+    session = await _get_or_create_session(db, user.id, body.session_key)
+    user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
+    db.add(user_msg)
+    await db.flush()
+
+    if not session.title or session.title == "新对话":
+        session.title = body.message[:30]
+
+    history = await _get_history(db, session.id, 20)
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+
+    tools = CHAT_TOOLS
+
+    async def event_stream():
+        full_content = ""
+        thinking_steps = []
+        tool_trace = []
+
+        try:
+            yield f"data: {json.dumps({'type': 'session', 'session_key': session.session_key})}\n\n"
+
+            # React循环（流式版本）
+            current_messages = [
+                {"role": "system", "content": _get_system_prompt("user")},
+                *messages,
+            ]
+
+            for round_num in range(1, MAX_REACT_ROUNDS + 1):
+                # 发请求（非流式获取完整响应，因为需要tool_calls）
+                resp_data = await _call_model(current_messages, tools, agent_type)
+
+                if "error" in resp_data:
+                    full_content = resp_data["error"]
+                    yield f"data: {json.dumps({'type': 'text', 'content': full_content})}\n\n"
+                    break
+
+                choice = resp_data.get("choices", [{}])[0]
+                msg = choice.get("message", {})
+                content = msg.get("content", "")
+                tool_calls = msg.get("tool_calls", [])
+
+                # 检查thinking/reasoning
+                if msg.get("reasoning_content"):
+                    step = {"type": "thinking", "content": msg["reasoning_content"], "round": round_num}
+                    thinking_steps.append(step)
+                    yield f"data: {json.dumps({'type': 'thinking', 'content': msg['reasoning_content'], 'round': round_num})}\n\n"
+
+                if tool_calls:
+                    # 有工具调用
+                    for tc in tool_calls:
+                        fn = tc.get("function", {})
+                        fn_name = fn.get("name", "unknown")
+                        fn_args = json.loads(fn.get("arguments", "{}"))
+                        logger.info(f"[chat-react] tool_call round={round_num} fn={fn_name} args={json.dumps(fn_args, ensure_ascii=False)}")
+
+                        # 通知前端工具调用
+                        call_event = {"type": "tool_call", "name": fn_name, "arguments": fn_args, "round": round_num}
+                        tool_trace.append(call_event)
+                        yield f"data: {json.dumps(call_event)}\n\n"
+
+                        # 执行工具
+                        tool_result = await _execute_tool(fn_name, fn_args, db, "user")
+                        result_event = {"type": "tool_result", "name": fn_name, "result": tool_result, "round": round_num}
+                        tool_trace.append(result_event)
+                        yield f"data: {json.dumps(result_event)}\n\n"
+
+                        # 添加助手消息和工具结果到对话（保留reasoning_content）
+                        assistant_entry = {
+                            "role": "assistant",
+                            "content": content or "",
+                            "tool_calls": [tc],
+                        }
+                        if msg.get("reasoning_content"):
+                            assistant_entry["reasoning_content"] = msg["reasoning_content"]
+                        current_messages.append(assistant_entry)
+                        current_messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.get("id", f"call_{round_num}"),
+                            "content": json.dumps(tool_result, ensure_ascii=False),
+                        })
+
+                    continue  # 继续下一轮
+
+                # 没有工具调用，流式输出最终内容
+                if content:
+                    # 逐字流式输出
+                    for i, ch in enumerate(content):
+                        full_content += ch
+                        yield f"data: {json.dumps({'type': 'text', 'content': ch})}\n\n"
+                break
+
+            # 保存到DB
+            if full_content:
+                async with async_session_factory() as save_db:
+                    save_msg = ChatMessage(
+                        session_id=session.id, role="assistant",
+                        content=full_content,
+                        thinking=json.dumps(thinking_steps, ensure_ascii=False),
+                        tool_calls=json.dumps(tool_trace, ensure_ascii=False),
+                    )
+                    save_db.add(save_msg)
+                    await save_db.commit()
+
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"[chat-stream] SSE异常 | {e}")
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.get("/chat/sessions")
+async def list_sessions(
+    agent_type: Optional[str] = None,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(f"[chat] 会话列表 | user={user.id} agent={agent_type}")
+    stmt = select(ChatSession).where(
+        ChatSession.user_id == user.id,
+        ChatSession.is_active == True,
+    )
+    if agent_type:
+        stmt = stmt.where(ChatSession.agent_type == agent_type)
+    stmt = stmt.order_by(desc(ChatSession.updated_at)).limit(50)
+    r = await db.execute(stmt)
+    sessions = r.scalars().all()
+
+    items = []
+    for s in sessions:
+        cnt_r = await db.execute(select(ChatMessage).where(ChatMessage.session_id == s.id))
+        msg_count = len(cnt_r.scalars().all())
+        items.append(ChatSessionOut(
+            session_key=s.session_key, title=s.title, agent_type=s.agent_type,
+            message_count=msg_count, created_at=s.created_at, updated_at=s.updated_at,
+        ))
+    return items
+
+
+@router.get("/chat/sessions/{session_key}")
+async def get_session_messages(
+    session_key: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(f"[chat] 会话消息 | key={session_key}")
+    r = await db.execute(select(ChatSession).where(ChatSession.session_key == session_key))
+    session = r.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
 
-    messages = await _get_history(db, session.id)
-    return {"session_key": session_key, "messages": messages}
-
-
-# ──────────────────────── Task Management ────────────────────────
-
-@router.get("/tasks")
-async def list_tasks(db: AsyncSession = Depends(get_db)):
-    """获取定时任务列表"""
-    result = await db.execute(
-        select(ScheduledTask).order_by(ScheduledTask.created_at.desc())
+    msgs_r = await db.execute(
+        select(ChatMessage).where(ChatMessage.session_id == session.id).order_by(ChatMessage.created_at)
     )
-    tasks = result.scalars().all()
+    messages = msgs_r.scalars().all()
     return {
-        "tasks": [
-            TaskResponse(
-                id=t.id,
-                name=t.name,
-                task_type=t.task_type,
-                cron_expr=t.cron_expr,
-                is_active=t.is_active,
-                last_run_at=t.last_run_at,
-                created_at=t.created_at,
-            ).model_dump()
-            for t in tasks
-        ]
+        "session": {"session_key": session.session_key, "title": session.title},
+        "messages": [ChatMessageOut.model_validate(m) for m in messages],
     }
 
 
-@router.post("/tasks")
-async def create_task(task: TaskCreate, db: AsyncSession = Depends(get_db)):
-    """创建定时任务"""
-    new_task = ScheduledTask(
-        name=task.name,
-        task_type=task.task_type,
-        cron_expr=task.cron_expr,
-        agent_type="dashboard",
+@router.delete("/chat/sessions/{session_key}")
+async def delete_session(
+    session_key: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info(f"[chat] 删除会话 | key={session_key}")
+    r = await db.execute(select(ChatSession).where(ChatSession.session_key == session_key))
+    session = r.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    session.is_active = False
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════════════════
+# React Loop 核心
+# ═══════════════════════════════════════════════════
+
+async def _react_loop(messages: list, agent_type: str, db: AsyncSession) -> dict:
+    """
+    React范式循环：发送消息→检查tool_calls→执行→送回结果→重复
+    返回 {"content": "...", "thinking_steps": [...], "tool_call_trace": [...], "rounds": N}
+    """
+    tools = CHAT_TOOLS if agent_type == "user" else OPERATIONS_TOOLS
+    system_prompt = _get_system_prompt(agent_type)
+
+    current_messages = [
+        {"role": "system", "content": system_prompt},
+        *messages,
+    ]
+
+    thinking_steps = []
+    tool_trace = []
+    final_content = ""
+
+    for round_num in range(1, MAX_REACT_ROUNDS + 1):
+        logger.info(f"[chat-react] round={round_num} agent={agent_type}")
+
+        resp_data = await _call_model(current_messages, tools, agent_type)
+
+        if "error" in resp_data:
+            final_content = resp_data["error"]
+            break
+
+        choice = resp_data.get("choices", [{}])[0]
+        msg = choice.get("message", {})
+        content = msg.get("content", "")
+        tool_calls = msg.get("tool_calls", [])
+
+        # 记录thinking
+        if msg.get("reasoning_content"):
+            thinking_steps.append({
+                "type": "thinking", "content": msg["reasoning_content"], "round": round_num,
+            })
+
+        if tool_calls:
+            # 有工具调用 — 保留reasoning_content以满足MiMo要求
+            assistant_msg_entry = {
+                "role": "assistant",
+                "content": content or "",
+                "tool_calls": tool_calls,
+            }
+            if msg.get("reasoning_content"):
+                assistant_msg_entry["reasoning_content"] = msg["reasoning_content"]
+            current_messages.append(assistant_msg_entry)
+
+            for tc in tool_calls:
+                fn = tc.get("function", {})
+                fn_name = fn.get("name", "unknown")
+                fn_args = json.loads(fn.get("arguments", "{}"))
+
+                logger.info(f"[chat-react] tool_call round={round_num} fn={fn_name} args={json.dumps(fn_args, ensure_ascii=False)}")
+
+                call_entry = {"type": "tool_call", "name": fn_name, "arguments": fn_args, "round": round_num}
+                tool_trace.append(call_entry)
+
+                tool_result = await _execute_tool(fn_name, fn_args, db, agent_type)
+
+                result_entry = {"type": "tool_result", "name": fn_name, "result": tool_result, "round": round_num}
+                tool_trace.append(result_entry)
+
+                current_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", f"call_{round_num}"),
+                    "content": json.dumps(tool_result, ensure_ascii=False),
+                })
+
+            continue  # 继续下一轮
+
+        # 没有工具调用，最终回复
+        final_content = content or "抱歉，我暂时无法回答这个问题，请稍后再试。"
+        break
+
+    if not final_content:
+        final_content = "AI服务暂不可用，请稍后重试"
+
+    return {
+        "content": final_content,
+        "thinking_steps": thinking_steps,
+        "tool_call_trace": tool_trace,
+        "rounds": round_num,
+    }
+
+
+async def _call_model(messages: list, tools: list, agent_type: str = "user") -> dict:
+    """通过 OpenClaw Gateway HTTP 调用 AI 模型"""
+    model = "openclaw/nailvista-xiaomei" if agent_type == "user" else "openclaw/nailvista-ops"
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "tools": tools,
+                "tool_choice": "auto",
+                "temperature": 0.7,
+                "max_tokens": 4096,
+            }
+            resp = await client.post(
+                f"{settings.OPENCLAW_BASE_URL}/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENCLAW_GATEWAY_TOKEN}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                msg = data['choices'][0].get('message', {})
+                logger.info(f"[chat-model] response | finish_reason={data['choices'][0].get('finish_reason','?')} "
+                           f"has_tool_calls={bool(msg.get('tool_calls'))} "
+                           f"has_reasoning={bool(msg.get('reasoning_content'))} "
+                           f"content_len={len(msg.get('content','') or '')}")
+                return data
+            else:
+                logger.error(f"[chat-model] 请求失败 | status={resp.status_code} body={resp.text[:300]}")
+                return {"error": "AI服务暂不可用，请稍后重试"}
+    except httpx.ConnectError as e:
+        logger.error(f"[chat-model] 连接失败 | {e}")
+        return {"error": "AI服务连接失败，请检查OpenClaw Gateway是否运行"}
+    except Exception as e:
+        logger.error(f"[chat-model] 异常 | {type(e).__name__}: {e}")
+        return {"error": f"AI服务异常: {str(e)}"}
+
+
+async def _execute_tool(fn_name: str, args: dict, db: AsyncSession, agent_type: str) -> dict:
+    """执行工具调用 — 查询后端数据库"""
+    try:
+        logger.info(f"[chat-tool] 执行 | fn={fn_name} args={json.dumps(args, ensure_ascii=False)}")
+        result = await execute_skill_dynamic(fn_name, args, db)
+        logger.info(f"[chat-tool] 完成 | fn={fn_name} success={result.get('success')} "
+                    f"data_keys={list(result.get('data',{}).keys()) if result.get('data') else 'none'}")
+        return result
+    except Exception as e:
+        logger.error(f"[chat-tool] 执行失败 | fn={fn_name} | {type(e).__name__}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _get_system_prompt(agent_type: str) -> str:
+    if agent_type == "user":
+        return """你是NailVista美甲平台的AI时尚顾问"小美"。性格温暖专业，回复简洁2-3句。
+
+你可以使用工具函数查询美甲款式、分类、推荐等数据。当用户提出以下需求时，你必须调用对应的工具函数获取真实数据：
+- 搜索款式 → 调用 search_nail_styles
+- 推荐款式 → 调用 recommend_nail_styles
+- 查看分类 → 调用 get_nail_categories
+- 评价试戴图 → 调用 evaluate_tryon_image
+
+重要规则：
+1. 收到工具返回的数据后，基于真实数据进行分析和推荐
+2. 用表格展示款式信息（名称、分类、价格、热度）
+3. 推荐时说明理由
+4. 引导用户去试戴页面体验
+5. 全程中文回复"""
+    else:
+        return """你是NailVista美甲平台的AI运营分析师"运营助手"。专业、数据驱动、逻辑清晰。
+
+你可以使用工具函数查询运营数据。当用户提出以下需求时，必须调用对应的工具函数：
+- 运营概览 → 调用 get_ops_overview
+- 营收分析 → 调用 get_revenue_data
+- 热门款式 → 调用 get_hot_styles
+- 趋势数据 → 调用 get_trend_data
+- 退款分析 → 调用 get_refund_analysis
+- 评价分析 → 调用 get_review_analysis
+- 流量分析 → 调用 get_traffic_analysis
+- 顾客分析 → 调用 get_customer_analysis
+
+重要规则：
+1. 收到数据后先确认完整性
+2. 用表格展示核心数据
+3. 分析对比变化趋势
+4. 用```chart代码块生成图表
+5. 给出2-3条运营建议（标注优先级：⚠️紧急/📌重要/💡建议）"""
+
+
+# ═══════════════════════════════════════════════════
+# 内部辅助函数
+# ═══════════════════════════════════════════════════
+
+async def _get_or_create_session(db: AsyncSession, user_id: int, session_key: Optional[str], agent_type: str = "user") -> ChatSession:
+    if session_key:
+        r = await db.execute(select(ChatSession).where(ChatSession.session_key == session_key))
+        session = r.scalar_one_or_none()
+        if session and session.user_id == user_id:
+            return session
+    session = ChatSession(user_id=user_id, session_key=uuid.uuid4().hex[:16], agent_type=agent_type)
+    db.add(session)
+    await db.flush()
+    logger.info(f"[chat] 创建新会话 | key={session.session_key} agent={agent_type}")
+    return session
+
+
+async def _get_history(db: AsyncSession, session_id: int, limit: int = 20) -> list:
+    r = await db.execute(
+        select(ChatMessage).where(ChatMessage.session_id == session_id)
+        .order_by(ChatMessage.created_at).limit(limit)
     )
-    db.add(new_task)
-    await db.commit()
-    await db.refresh(new_task)
-
-    return TaskResponse(
-        id=new_task.id,
-        name=new_task.name,
-        task_type=new_task.task_type,
-        cron_expr=new_task.cron_expr,
-        is_active=new_task.is_active,
-        last_run_at=new_task.last_run_at,
-        created_at=new_task.created_at,
-    ).model_dump()
-
-
-@router.delete("/tasks/{task_id}")
-async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """删除定时任务"""
-    result = await db.execute(
-        select(ScheduledTask).where(ScheduledTask.id == task_id)
-    )
-    task = result.scalar_one_or_none()
-    if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
-
-    await db.delete(task)
-    await db.commit()
-    return {"message": "已删除"}
+    msgs = r.scalars().all()
+    return [{"role": m.role, "content": m.content} for m in msgs]

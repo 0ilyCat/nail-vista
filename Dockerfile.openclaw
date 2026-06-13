@@ -1,0 +1,24 @@
+# ============================================================
+# OpenClaw Gateway 容器
+# 基于 Node 22 Alpine，安装 openclaw npm 包
+# ============================================================
+FROM node:22-alpine
+
+WORKDIR /app
+
+# 安装 OpenClaw CLI（与开发环境版本一致，使用国内镜像加速）
+RUN npm install -g openclaw@2026.5.28 --registry=https://registry.npmmirror.com
+
+# 复制 OpenClaw 配置（agents/skills 等）
+COPY .openclaw/ .openclaw/
+
+# 将模板复制到卷外（卷挂载会覆盖 .openclaw/ 目录）
+RUN cp .openclaw/openclaw.json.template /openclaw.json.template
+
+# 复制入口脚本
+COPY openclaw-entrypoint.sh /
+RUN chmod +x /openclaw-entrypoint.sh
+
+EXPOSE 18789
+
+ENTRYPOINT ["/openclaw-entrypoint.sh"]

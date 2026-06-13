@@ -1,0 +1,693 @@
+﻿/* ── NailVista Global Styles — 粉色系 v5.1（毛玻璃+光晕增强版） ── */
+
+/* ═══════════════════ 动画关键帧 ═══════════════════ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── 变换球动画 ── */
+@keyframes blobMorph {
+  0%   { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+  20%  { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.04); }
+  40%  { border-radius: 50% 50% 40% 60% / 40% 40% 60% 60%; transform: scale(1.02); }
+  60%  { border-radius: 40% 60% 50% 50% / 70% 50% 30% 50%; transform: scale(1.03); }
+  80%  { border-radius: 35% 50% 60% 45% / 55% 40% 50% 45%; transform: scale(1.01); }
+  100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+}
+
+@keyframes blobColorShift {
+  0%   { background: #2f6f68; }
+  20%  { background: #245c56; }
+  40%  { background: #17413d; }
+  60%  { background: #d7b46a; }
+  80%  { background: #7ba7a0; }
+  100% { background: #2f6f68; }
+}
+
+@keyframes blobGlowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(47,111,104,0.35), 0 0 40px rgba(47,111,104,0.12); }
+  50%      { box-shadow: 0 0 28px rgba(215,180,106,0.4), 0 0 56px rgba(215,180,106,0.15); }
+}
+
+/* ── Chat输入框区域渐变光晕 ── */
+@keyframes softGlowFloat {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    opacity: 0.75;
+    transform: translate(10px, -5px) scale(1.03);
+  }
+  66% {
+    opacity: 0.65;
+    transform: translate(-8px, 3px) scale(1.01);
+  }
+}
+
+@keyframes glowPulseSlow {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.7; }
+}
+
+/* ── 试戴加载动画彩带 ── */
+@keyframes ribbonFloat1 {
+  0%   { transform: translate(-10%, -5%) rotate(0deg) scaleX(1.2); }
+  25%  { transform: translate(15%, 10%) rotate(90deg) scaleX(0.8); }
+  50%  { transform: translate(-5%, 20%) rotate(180deg) scaleX(1.3); }
+  75%  { transform: translate(10%, -10%) rotate(270deg) scaleX(0.9); }
+  100% { transform: translate(-10%, -5%) rotate(360deg) scaleX(1.2); }
+}
+
+@keyframes ribbonFloat2 {
+  0%   { transform: translate(5%, 10%) rotate(60deg) scaleX(0.9); }
+  33%  { transform: translate(-15%, -15%) rotate(150deg) scaleX(1.4); }
+  66%  { transform: translate(20%, 5%) rotate(240deg) scaleX(0.7); }
+  100% { transform: translate(5%, 10%) rotate(420deg) scaleX(0.9); }
+}
+
+@keyframes ribbonFloat3 {
+  0%   { transform: translate(0%, 15%) rotate(30deg) scaleX(1); }
+  50%  { transform: translate(15%, -10%) rotate(210deg) scaleX(1.5); }
+  100% { transform: translate(0%, 15%) rotate(390deg) scaleX(1); }
+}
+
+/* 页面入场动画 */
+.ant-layout-content > div {
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+/* Modal 入场 - 使用 opacity 避免与 Ant Design 内置动画冲突 */
+.ant-modal-root .ant-modal {
+  /* 保留动画效果由 Ant Design 内置 zoom 动画处理 */
+}
+
+/* ═══════════════════ 变换球样式 ═══════════════════ */
+
+/* 小球（悬浮按钮内） */
+.morphing-blob {
+  width: 44px; height: 44px;
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  animation:
+    blobMorph 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite,
+    blobColorShift 6s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite,
+    blobGlowPulse 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  flex-shrink: 0;
+  position: relative;
+}
+.morphing-blob::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), transparent 60%);
+  animation: blobMorph 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+/* 大球（Chat页侧栏/空状态） */
+.chat-page-blob {
+  width: 110px; height: 110px;
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  animation:
+    blobMorph 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite,
+    blobColorShift 8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite,
+    blobGlowPulse 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  position: relative;
+}
+.chat-page-blob::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.4), transparent 55%);
+  animation: blobMorph 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+/* ═══════════════════ Chat输入框区域渐变光晕背景 ═══════════════════ */
+.chat-welcome-glow {
+  position: absolute;
+  width: 500px;
+  height: 300px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.chat-welcome-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%,
+    rgba(232, 112, 141, 0.12) 0%,
+    rgba(232, 112, 141, 0.06) 30%,
+    rgba(180, 130, 200, 0.04) 55%,
+    transparent 70%
+  );
+  filter: blur(32px);
+  animation: softGlowFloat 12s ease-in-out infinite;
+}
+.chat-welcome-glow::after {
+  content: '';
+  position: absolute;
+  inset: 20% 10%;
+  background: radial-gradient(ellipse at 30% 60%,
+    rgba(139, 106, 181, 0.08) 0%,
+    rgba(100, 140, 200, 0.05) 40%,
+    transparent 70%
+  );
+  filter: blur(28px);
+  animation: glowPulseSlow 8s ease-in-out infinite reverse;
+}
+
+/* ═══════════════════ 悬浮按钮样式 ═══════════════════ */
+.floating-ask-btn {
+  position: fixed;
+  bottom: 32px;
+  left: 32px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px 10px 12px;
+  border: none;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  cursor: grab;
+  transition: all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow: visible;
+  isolation: isolate;
+  user-select: none;
+}
+.floating-ask-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.16),
+    0 0 0 1px rgba(47,111,104,0.15),
+    0 4px 16px rgba(47,111,104,0.08);
+}
+.floating-ask-btn:active {
+  transform: translateY(0) scale(0.98);
+  cursor: grabbing;
+}
+.floating-ask-text {
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2f6f68, #245c56);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 200ms ease,
+              margin-left 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 0;
+}
+.floating-ask-btn:hover .floating-ask-text {
+  max-width: 100px;
+  opacity: 1;
+  margin-left: 4px;
+}
+
+/* ═══════════════════ 试戴加载动画 ═══════════════════ */
+.tryon-generating {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: #1a0a10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tryon-generating-canvas {
+  position: absolute;
+  inset: -20%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paint-ribbon {
+  position: absolute;
+  border-radius: 40% 60% 50% 50% / 45% 55% 45% 55%;
+  mix-blend-mode: screen;
+  opacity: 0.8;
+  filter: blur(12px);
+}
+.paint-ribbon:nth-child(1) {
+  width: 70%; height: 45%;
+  background: linear-gradient(135deg, #2f6f68, #17413d);
+  animation: ribbonFloat1 6s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  top: 15%; left: -5%;
+}
+.paint-ribbon:nth-child(2) {
+  width: 55%; height: 55%;
+  background: linear-gradient(180deg, #245c56, #F0C674);
+  animation: ribbonFloat2 7s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  top: -10%; right: 0%;
+}
+.paint-ribbon:nth-child(3) {
+  width: 50%; height: 60%;
+  background: linear-gradient(225deg, #7BC4E8, #5B9BD5);
+  animation: ribbonFloat3 5.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  bottom: -15%; left: 20%;
+}
+.paint-ribbon:nth-child(4) {
+  width: 65%; height: 40%;
+  background: linear-gradient(90deg, #d7b46a, #E87BD4);
+  animation: ribbonFloat1 6.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.5s infinite reverse;
+  bottom: 5%; right: -10%;
+}
+.paint-ribbon:nth-child(5) {
+  width: 40%; height: 50%;
+  background: linear-gradient(45deg, #2f6f68, #d7b46a, #7BAAD4);
+  animation: ribbonFloat2 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s infinite;
+  top: 25%; left: 30%;
+}
+.tryon-generating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 35% 40%, rgba(255,255,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 1;
+}
+.tryon-generating-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.35) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 2;
+  color: white;
+}
+.gen-text {
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.gen-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* ═══════════════════ Markdown 渲染样式 ═══════════════════ */
+.chat-markdown-body {
+  word-break: break-word;
+  line-height: 1.7;
+}
+.chat-markdown-body p {
+  margin: 0 0 8px 0;
+}
+.chat-markdown-body p:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown-body h1, .chat-markdown-body h2, .chat-markdown-body h3,
+.chat-markdown-body h4, .chat-markdown-body h5, .chat-markdown-body h6 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.chat-markdown-body h1 { font-size: 1.3em; }
+.chat-markdown-body h2 { font-size: 1.2em; }
+.chat-markdown-body h3 { font-size: 1.1em; }
+.chat-markdown-body ul, .chat-markdown-body ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+.chat-markdown-body li {
+  margin: 2px 0;
+}
+.chat-markdown-body blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #2f6f68;
+  background: #f8f8f8;
+  border-radius: 0 6px 6px 0;
+  color: #555;
+}
+.chat-markdown-body code {
+  background: #f5f5f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #17413d;
+}
+.chat-markdown-body pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.chat-markdown-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+.chat-markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.chat-markdown-body th {
+  background: #f8f8f8;
+  color: #222;
+  font-weight: 600;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid #eee;
+}
+.chat-markdown-body td {
+  padding: 6px 12px;
+  border: 1px solid #F0F0F0;
+}
+.chat-markdown-body tr:nth-child(even) td {
+  background: #fafafa;
+}
+.chat-markdown-body tr:hover td {
+  background: #f5f5f5;
+}
+.chat-markdown-body a {
+  color: #2f6f68;
+  text-decoration: none;
+}
+.chat-markdown-body a:hover {
+  text-decoration: underline;
+}
+.chat-markdown-body hr {
+  border: none;
+  border-top: 1px solid #F0F0F0;
+  margin: 12px 0;
+}
+.chat-markdown-body img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.chat-markdown-body strong {
+  color: #222;
+}
+
+/* ═══════════════════ Ant Design 覆盖（v5.1 光晕增强）═══════════════════ */
+
+/* Smooth transitions for interactive elements */
+.ant-btn {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-btn:hover:not(.ant-btn-primary):not(.ant-btn-dangerous):not(:disabled) {
+  background: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+}
+
+/* Primary button click feedback */
+.ant-btn-primary:active:not(:disabled) {
+  transform: scale(0.97) !important;
+}
+
+/* Card hover lift + 荧光粉边缘光晕 */
+.ant-card-hoverable {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.ant-card-hoverable:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(47,111,104,0.10),
+    0 0 16px rgba(47,111,104,0.06) !important;
+}
+
+/* Input focus glow — 荧光粉光晕 */
+.ant-input:focus,
+.ant-input-focused {
+  box-shadow: 0 0 0 2px rgba(47,111,104,0.15), 0 0 8px rgba(47,111,104,0.08) !important;
+}
+
+/* TextArea focus 荧光粉光晕 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input[data-status="focus"],
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(47,111,104,0.14), 0 0 12px rgba(47,111,104,0.07) !important;
+}
+
+/* Smoother scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+
+/* ═══════════════════ Logo Instagram 风格艺术字体 ═══════════════════ */
+.logo-brand {
+  font-family: 'Pacifico', cursive;
+  font-weight: 400;
+  font-size: 26px;
+  margin-right: 36px;
+  white-space: nowrap;
+  letter-spacing: 1px;
+  text-decoration: none;
+  background: linear-gradient(135deg, #2f6f68 0%, #245c56 25%, #17413d 50%, #d7b46a 75%, #7ba7a0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 1px 2px rgba(47,111,104,0.12));
+  transition: filter 0.2s;
+}
+.logo-brand:hover {
+  filter: drop-shadow(0 3px 10px rgba(47,111,104,0.35));
+}
+
+/* ═══════════════════ 菜单栏全部毛玻璃 ═══════════════════ */
+.main-nav-menu {
+  background: transparent !important;
+}
+.main-nav-menu .ant-menu-item {
+  background: transparent !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+.main-nav-menu .ant-menu-item:hover {
+  background: rgba(47,111,104,0.06) !important;
+}
+.main-nav-menu .ant-menu-item-selected {
+  background: rgba(47,111,104,0.10) !important;
+  color: #2f6f68 !important;
+}
+.main-nav-menu .ant-menu-item-selected::after {
+  border-bottom-color: #2f6f68 !important;
+}
+.main-nav-menu .ant-menu-item a {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+/* ═══════════════════ 问问小美迷你变换球 ═══════════════════ */
+.ask-blob-mini {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  background: linear-gradient(135deg, #2f6f68, #d7b46a);
+  animation: blobMorph 3s ease-in-out infinite, blobColorShift 5s ease-in-out infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Table hover row — 灰色为主 */
+.ant-table-tbody > tr:hover > td {
+  background: #fafafa !important;
+}
+
+/* Menu item hover —粉色下划线 */
+.ant-menu-horizontal > .ant-menu-item:hover::after,
+.ant-menu-horizontal > .ant-menu-submenu:hover::after {
+  border-bottom-color: #2f6f68 !important;
+}
+
+/* Menu selected item */
+.ant-menu-horizontal > .ant-menu-item-selected::after {
+  border-bottom-color: #2f6f68 !important;
+}
+
+/* Tag refinements — 圆角柔和化 */
+.ant-tag {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Modal refinements */
+.ant-modal-content {
+  border-radius: 16px !important;
+}
+
+.ant-modal-mask {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Avatar hover scale */
+.ant-avatar {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.avatar-hover:hover {
+  transform: scale(1.1) !important;
+}
+
+/* Dropdown menu items — 灰色hover */
+.ant-dropdown-menu-item:hover {
+  background: #f5f5f5 !important;
+}
+
+/* Select dropdown selection — 浅灰 */
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: #f5f5f5 !important;
+}
+
+/* Upload drag area */
+.ant-upload-drag {
+  border-radius: 12px !important;
+  transition: all 0.25s ease !important;
+}
+.ant-upload-drag:hover {
+  border-color: #2f6f68 !important;
+  background: #fdfdfd;
+}
+
+/* TimePicker panel — 粉色选择 */
+.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: #f3f8f4 !important;
+  color: #2f6f68;
+}
+
+/* Date picker selection */
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  background: #2f6f68 !important;
+  border-color: #2f6f68 !important;
+}
+
+/* Message/notification — rounded */
+.ant-message-notice-content {
+  border-radius: 10px !important;
+}
+
+/* Pagination active — 粉色 */
+.ant-pagination-item-active a {
+  color: #2f6f68 !important;
+}
+.ant-pagination-item-active {
+  border-color: #2f6f68 !important;
+}
+
+/* Tab bar — 粉色active指示器 */
+.ant-tabs-ink-bar {
+  background: #2f6f68 !important;
+}
+.ant-tabs-tab:hover {
+  color: #2f6f68 !important;
+}
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #2f6f68 !important;
+}
+
+/* Checkbox & Radio checked — 粉色 */
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #2f6f68 !important;
+  border-color: #2f6f68 !important;
+}
+.ant-radio-wrapper:checked .ant-radio-inner {
+  border-color: #2f6f68 !important;
+}
+.ant-radio-wrapper:checked .ant-radio-inner::after {
+  background-color: #2f6f68 !important;
+
+}
+/* Switch on */
+.ant-switch-checked {
+  background-color: #2f6f68 !important;
+}
+
+/* Link color override */
+a:hover {
+  color: #245c56;
+}
+
+/* Loading spinner tint — 粉色 */
+.ant-spin-dot-item {
+  background-color: #2f6f68 !important;
+}
+
+/* Badge count — 粉色 */
+.ant-badge-count {
+  background-color: #2f6f68 !important;
+}
+
+/* ═══════════════════ v5.1 新增：全局交互微动效 ═══════════════════ */
+
+/* 按钮hover荧光边缘 */
+.ant-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 12px rgba(47,111,104,0.25), 0 2px 8px rgba(47,111,104,0.15) !important;
+}
+
+/* 卡片可点击项hover浅灰底 */
+.ant-card-body:hover .ant-typography {
+  transition: color 0.2s;
+}
+
+/* Tag hover 轻微发光 */
+.ant-tag:hover {
+  box-shadow: 0 0 6px rgba(47,111,104,0.10);
+}
+
+/* 导航栏毛玻璃效果辅助：确保内容区背景可见 */
+.ant-layout {
+  background: transparent;
+}
+
+/* 输入框占位符颜色优化 */
+::placeholder {
+  color: #bbb;
+}
+
+/* 图片加载失败占位样式 */
+img[src=""],
+img:not([src]) {
+  background: #f5f5f5;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+

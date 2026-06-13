@@ -2,126 +2,168 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 15000,
 });
 
-// ===== 试戴 =====
-export interface HandInfo {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  path?: string;
-}
+// 请求拦截器 — 自动附加 token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-export interface HandUploadResult {
-  hand_id: string;
-  image_url: string;
-  db_id: number;
-  message: string;
-}
+// 响应拦截器 — 401 自动跳转登录
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+    return Promise.reject(err);
+  }
+);
 
-export const getHandImages = async (): Promise<HandInfo[]> => {
-  const { data } = await api.get('/tryon/hand-images');
-  return data.hands;
+// ============ 认证 ============
+export const authAPI = {
+  login: (data: { username: string; password: string }) => api.post('/auth/login', data),
+  register: (data: { username: string; password: string; nickname?: string; role?: string }) => api.post('/auth/register', data),
+  getMe: () => api.get('/auth/me'),
+  updateMe: (data: any) => api.put('/auth/me', data),
+  getStats: () => api.get('/auth/stats'),
+  changePassword: (data: { old_password: string; new_password: string }) => api.post('/auth/change-password', data),
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/auth/upload-avatar', fd);
+  },
 };
 
-export const uploadHand = async (file: File): Promise<HandUploadResult> => {
-  const form = new FormData();
-  form.append('file', file);
-  const { data } = await api.post('/tryon/upload-hand', form);
-  return data;
+// ============ 美甲款式 ============
+export const stylesAPI = {
+  list: (params?: any) => api.get('/styles', { params }),
+  getDetail: (id: number) => api.get(`/styles/${id}`),
+  categories: () => api.get('/styles/categories'),
+  hotRanking: (limit = 10) => api.get('/styles/hot/ranking', { params: { limit } }),
+  related: (id: number) => api.get(`/styles/${id}/related`),
 };
 
-export interface TryOnResult {
-  result_url: string;
-  duration_ms: number;
-  style_name: string;
-  source: string;
-}
-
-export const startTryOn = async (handId: string, styleId: number): Promise<TryOnResult> => {
-  const form = new FormData();
-  form.append('hand_id', handId);
-  form.append('style_id', String(styleId));
-  const { data } = await api.post('/tryon/try-on', form);
-  return data;
+// ============ 帖子 ============
+export const postsAPI = {
+  list: (params?: any) => api.get('/posts', { params }),
+  getDetail: (id: number) => api.get(`/posts/${id}`),
+  create: (data: any) => api.post('/posts', data),
+  delete: (id: number) => api.delete(`/posts/${id}`),
+  toggleLike: (id: number) => api.post(`/posts/${id}/like`),
+  toggleFavorite: (id: number) => api.post(`/posts/${id}/favorite`),
+  uploadImage: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/posts/upload-image', fd);
+  },
 };
 
-export const getTryonHistory = async (limit = 20, offset = 0) => {
-  const { data } = await api.get('/tryon/history', { params: { limit, offset } });
-  return data;
+// ============ 商家 ============
+export const merchantsAPI = {
+  list: (params?: any) => api.get('/merchants', { params }),
+  getDetail: (id: number) => api.get(`/merchants/${id}`),
+  cities: () => api.get('/merchants/cities'),
+  styles: (id: number, params?: any) => api.get(`/merchants/${id}/styles`, { params }),
+  getSlots: (id: number, date?: string) => api.get(`/merchants/${id}/slots`, { params: date ? { date } : {} }),
+  getTags: () => api.get('/tags'),
+  uploadImage: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/merchants/upload-image', fd);
+  },
+  join: (data: any) => api.post('/merchants/join', data),
 };
 
-// ===== 款式 =====
-export interface NailStyleItem {
-  id: number;
-  name: string;
-  local_url: string;
-  original_url: string;
-  enhanced_url: string;
-  category: string;
-  color_tone: string;
-  tags: string[];
-  description: string;
-  popularity: number;
-  today_tryons: number;
-}
-
-export const getStyles = async (params: {
-  category?: string;
-  search?: string;
-  sort?: string;
-  page?: number;
-  size?: number;
-} = {}) => {
-  const { data } = await api.get('/styles', { params });
-  return data as { items: NailStyleItem[]; total: number; page: number; size: number };
+// ============ 预约 ============
+export const appointmentsAPI = {
+  create: (data: any) => api.post('/appointments', data),
+  list: (params?: any) => api.get('/appointments', { params }),
+  getDetail: (id: number) => api.get(`/appointments/${id}`),
+  update: (id: number, status: string) => api.put(`/appointments/${id}?status=${status}`),
+  cancel: (id: number) => api.delete(`/appointments/${id}`),
 };
 
-export const getStyleDetail = async (id: number) => {
-  const { data } = await api.get(`/styles/${id}`);
-  return data;
+// ============ AI对话 ============
+export const chatAPI = {
+  send: (data: { message: string; session_key?: string }) => api.post('/chat/user', data),
+  getSessions: (agentType?: string) => api.get('/chat/sessions', { params: agentType ? { agent_type: agentType } : {} }),
+  getMessages: (key: string) => api.get(`/chat/sessions/${key}`),
+  deleteSession: (key: string) => api.delete(`/chat/sessions/${key}`),
 };
 
-export const getCategories = async () => {
-  const { data } = await api.get('/styles/categories');
-  return data.categories as { name: string; count: number }[];
+// ============ 运营助手对话 ============
+export const opsChatAPI = {
+  send: (data: { message: string; session_key?: string }) => api.post('/chat/ops', data),
+  getSessions: () => api.get('/chat/sessions', { params: { agent_type: 'ops' } }),
+  getMessages: (key: string) => api.get(`/chat/sessions/${key}`),
 };
 
-export const getHotRanking = async (limit = 10, days = 7) => {
-  const { data } = await api.get('/styles/hot/ranking', { params: { limit, days } });
-  return data.ranking;
+// ============ 试戴 ============
+export const tryonAPI = {
+  getHands: () => api.get('/tryon/hand-images'),
+  uploadHand: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/tryon/upload-hand', fd);
+  },
+  tryOn: (data: { hand_image_id: number; style_id: number; force_regenerate?: boolean }) =>
+    api.post('/tryon/try-on', data, { timeout: 310000 }),
+  history: (params?: any) => api.get('/tryon/history', { params }),
+  deleteHand: (id: number) => api.delete(`/tryon/hand-images/${id}`),
+  deleteHistory: (id: number) => api.delete(`/tryon/history/${id}`),
 };
 
-// ===== 数据分析 =====
-export const getOverview = async () => {
-  const { data } = await api.get('/analytics/overview');
-  return data;
+// ============ 收藏 ============
+export const favoritesAPI = {
+  toggleMerchant: (id: number) => api.post(`/favorites/merchants/${id}`),
+  listMerchants: (params?: any) => api.get('/favorites/merchants', { params }),
+  toggleStyle: (id: number) => api.post(`/favorites/styles/${id}`),
+  listStyles: (params?: any) => api.get('/favorites/styles', { params }),
 };
 
-export const getTrends = async (days = 7) => {
-  const { data } = await api.get('/analytics/trends', { params: { days } });
-  return data.trends;
+// ============ 搜索 ============
+export const searchAPI = {
+  all: (q: string, type = 'all') => api.get('/search', { params: { q, type } }),
 };
 
-export const getHotStylesData = async (limit = 10, days = 7) => {
-  const { data } = await api.get('/analytics/hot-styles', { params: { limit, days } });
-  return data.styles;
+// ============ 商家仪表盘 ============
+export const dashboardAPI = {
+  overview: () => api.get('/dashboard/overview'),
+  appointments: (params?: any) => api.get('/dashboard/appointments', { params }),
+  revenue: () => api.get('/dashboard/revenue'),
 };
 
-// ===== 智能运营 =====
-export const chatWithAI = async (message: string) => {
-  const { data } = await api.post('/operations/chat', { message });
-  return data as { reply: string; type: string };
+// ============ 商家管理（款式 + 预约） ============
+export const adminAPI = {
+  // 款式
+  listStyles: (params?: any) => api.get('/admin/styles', { params }),
+  createStyle: (data: any) => api.post('/admin/styles', data),
+  updateStyle: (id: number, data: any) => api.put(`/admin/styles/${id}`, data),
+  deleteStyle: (id: number) => api.delete(`/admin/styles/${id}`),
+  uploadStyleImage: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/admin/styles/upload-image', fd);
+  },
+  setStyleImage: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/admin/styles/${id}/image`, fd);
+  },
+  // 预约管理
+  listAppointments: (params?: any) => api.get('/admin/appointments', { params }),
+  updateAppointment: (id: number, status: string) =>
+    api.put(`/admin/appointments/${id}`, { status }),
+  // 店铺信息（含时段配置）
+  getProfile: () => api.get('/admin/merchant-profile'),
+  updateProfile: (data: any) => api.put('/admin/merchant-profile', data),
 };
 
-export const generateReport = async (reportType: 'daily' | 'trend' | 'strategy' = 'daily') => {
-  const { data } = await api.post('/operations/reports/generate', null, { params: { report_type: reportType } });
-  return data;
-};
-
-export const getReports = async (reportType = 'daily', limit = 10) => {
-  const { data } = await api.get('/operations/reports', { params: { report_type: reportType, limit } });
-  return data;
-};
+export default api;

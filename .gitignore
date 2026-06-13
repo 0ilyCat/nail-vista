@@ -2,6 +2,8 @@
 output/
 screenshots/
 .playwright-cli/
+tests/test-results/
+/*.png
 
 # Backend runtime data
 # AI 生成的试戴结果图（运行时产生，不提交）
@@ -23,8 +25,10 @@ __pycache__/
 node_modules/
 dist/
 .vite/
+frontend/node_modules/
+frontend/dist/
 
-# Env & secrets
+# Env & secrets — .env 含真实密钥不提交，用 .env.example 模板
 .env
 *.db
 backend/app/nail_tryon.db
@@ -52,6 +56,7 @@ Thumbs.db
 # IDE & Runtime plugins
 .openclaw/plugin-skills/
 .vscode/
+# .openclaw/openclaw.json — 含 API Key，不提交
 .openclaw/openclaw.json
 .openclaw/agents/*/.openclaw/
 

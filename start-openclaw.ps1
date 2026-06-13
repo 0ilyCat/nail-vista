@@ -50,6 +50,27 @@ foreach ($Dir in $DirsToCreate) {
 # ============================================================
 # 4. 启动 OpenClaw Gateway
 # ============================================================
+
+# 配置端口
+Write-Host "`n=== 端口 $Port 自动清理工具 ===" -ForegroundColor Cyan
+
+# 1. 获取占用端口的进程
+$tcpProcess = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+
+if ($tcpProcess) {
+    # 获取进程PID
+    $processId = $tcpProcess.OwningProcess
+    Write-Host "`n检测到端口 $Port 被 PID: $processId 占用" -ForegroundColor Yellow
+    
+    # 强制终止进程
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 300
+    Write-Host "进程已强制关闭" -ForegroundColor Green
+}
+else {
+    Write-Host "`n端口 $Port 空闲，无需清理" -ForegroundColor Green
+}
+
 Write-Host ""
 Write-Host "正在启动 OpenClaw Gateway (端口 $Port)..." -ForegroundColor Cyan
 Write-Host "配置来源 : $OpenClawDir\openclaw.json"

@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "runs": {
+    "dfa2c1b6-a005-4cbc-9951-5f2e865c488d": {
+      "runId": "dfa2c1b6-a005-4cbc-9951-5f2e865c488d",
+      "childSessionKey": "agent:nailvista-xiaomei:subagent:0e90b6ae-2680-4bed-a682-992045b2aa5b",
+      "controllerSessionKey": "agent:nailvista-xiaomei:openai:d6f37e36-db09-41aa-996d-4d9e354d1a47",
+      "requesterSessionKey": "agent:nailvista-xiaomei:openai:d6f37e36-db09-41aa-996d-4d9e354d1a47",
+      "requesterOrigin": {
+        "channel": "webchat"
+      },
+      "requesterDisplayKey": "agent:nailvista-xiaomei:openai:d6f37e36-db09-41aa-996d-4d9e354d1a47",
+      "task": "回复\"我是新创建的子session测试成功！\"然后报告你的session信息。",
+      "taskName": "test-session-creation",
+      "cleanup": "keep",
+      "expectsCompletionMessage": true,
+      "spawnMode": "run",
+      "label": "测试session创建",
+      "model": "xiaomi-coding/mimo-v2.5",
+      "agentDir": "D:\\projects\\myproject\\nail-vista\\.openclaw\\agents\\nailvista-xiaomei\\state",
+      "workspaceDir": "D:\\projects\\myproject\\nail-vista\\.openclaw\\agents\\nailvista-xiaomei",
+      "runTimeoutSeconds": 0,
+      "createdAt": 1780656721169,
+      "startedAt": 1780656729336,
+      "execution": {
+        "status": "terminal",
+        "startedAt": 1780656729336,
+        "endedAt": 1780656735915,
+        "outcome": {
+          "status": "ok",
+          "startedAt": 1780656729336,
+          "endedAt": 1780656735915,
+          "elapsedMs": 6579
+        }
+      },
+      "completion": {
+        "required": true,
+        "resultText": "我是新创建的子session测试成功！\n\n## Session 信息\n\n| 字段 | 值 |\n|------|-----|\n| **Session ID** | `agent:nailvista-xiaomei:subagent:0e90b6ae-2680-4bed-a682-992045b2aa5b` |\n| **Label** | 测试session创建 |\n| **Requester** | `agent:nailvista-xiaomei:openai:d6f37e36-db09-41aa-996d-4d9e354d1a47` |\n| **Channel** | webchat |\n| **Agent** | nailvista-xiaomei |\n| **Model** | xiaomi-coding/mimo-v2.5 |\n| **Host** | LAPTOP-PJQR24VB |\n| **OS** | Windows_NT 10.0.26200 (x64) |\n| **Node.js** | v22.19.0 |\n| **Working Dir** | `D:\\projects\\myproject\\nail-vista\\.openclaw\\agents\\nailvista-xiaomei` |\n\n子session创建测试完成，一切正常运行。",
+        "capturedAt": 1780656737302
+      },
+      "delivery": {
+        "status": "delivered",
+        "deliveredAt": 1780656755563,
+        "lastError": null,
+        "announcedAt": 1780656755563
+      },
+      "sessionStartedAt": 1780656721169,
+      "accumulatedRuntimeMs": 0,
+      "cleanupHandled": true,
+      "retainAttachmentsOnKeep": false,
+      "endedAt": 1780656735915,
+      "outcome": {
+        "status": "ok",
+        "startedAt": 1780656729336,
+        "endedAt": 1780656735915,
+        "elapsedMs": 6579
+      },
+      "endedReason": "subagent-complete",
+      "endedHookEmittedAt": 1780656756546,
+      "cleanupCompletedAt": 1780656756654
+    }
+  }
+}

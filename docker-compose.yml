@@ -1,53 +1,122 @@
-version: "3.9"
-
+# ============================================================
+# NailVista Docker Compose 部署配置
+# 服务: MySQL 8.0 + Backend(FastAPI) + Frontend(Nginx) + OpenClaw Gateway
+# 网络: my-network
+# ============================================================
 services:
-  db:
-    image: postgres:16-alpine
+  # ── MySQL 8.0 数据库 ──
+  mysql:
+    image: mysql:8.0
+    container_name: nailvista-mysql
     environment:
-      POSTGRES_DB: nail_tryon
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-NailVista2026!}
+      MYSQL_DATABASE: ${DB_NAME:-nail_vista}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - my-network
 
+  # ── FastAPI 后端 ──
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: nailvista-backend
+    environment:
+      # 数据库
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-NailVista2026!}
+      DB_NAME: ${DB_NAME:-nail_vista}
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-nailvista-jwt-secret-change-in-production}
+      # 阿里百炼 AI（AI试戴必填）
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      # OpenClaw AI Gateway（AI对话）
+      OPENCLAW_BASE_URL: http://openclaw:18789
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-nailvista-dev-token}
+      # CORS（替换为服务器IP或域名）
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost","http://127.0.0.1"]}
+      # 运行模式
+      DEBUG: "false"
     ports:
       - "8190:8190"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/nail_tryon
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
-      DEBUG: "false"
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
-      - ./openclaw:/app/openclaw:ro
-      - uploads:/app/uploads
-      - results:/app/results
-    command: >
-      sh -c "OPENCLAW_HOME=/app openclaw gateway run --port 18789 &
-             uvicorn app.main:app --host 0.0.0.0 --port 8190 --reload"
+      - uploads_data:/app/static
+    depends_on:
+      mysql:
+        condition: service_healthy
+      openclaw:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - my-network
 
+  # ── OpenClaw AI Gateway ──
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+    container_name: nailvista-openclaw
+    environment:
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-nailvista-dev-token}
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw_data:/app/.openclaw
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  # ── Nginx 前端 ──
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: nailvista-frontend
     ports:
-      - "4180:80"
+      - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
+    networks:
+      - my-network
 
+# ── 数据卷 ──
 volumes:
-  pgdata:
-  uploads:
-  results:
+  mysql_data:
+    driver: local
+  uploads_data:
+    driver: local
+  openclaw_data:
+    driver: local
+
+# ── 网络 ──
+networks:
+  my-network:
+    driver: bridge
