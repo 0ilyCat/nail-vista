@@ -26,7 +26,7 @@
 
 ---
 
-## 🎬 演示视频
+## 🎬 演示视频 (旧版前端，仅作展示功能)
 https://github.com/user-attachments/assets/2cb731be-d0ca-4488-a661-0bd5be51942b
 
 ---
