@@ -1,4 +1,7 @@
-<div align="center">
+
+
+# 💅NailVista — AI美甲试戴与智能运营系统
+<div>
 
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" />
 <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
@@ -11,13 +14,20 @@
 
 </div>
 
-# NailVista — AI美甲试戴与智能运营系统
-
-> [http://175.178.224.202/](http://175.178.224.202/) 项目已上线，欢迎体验
-
 > 让用户「所见即所得」，让商家「数据驱动经营」
 
+> 👉[http://175.178.224.202/](http://175.178.224.202/)👈 项目已上线，欢迎体验！！
+
 美团校园 AI Hackathon 大赛 · 龙猫队
+
+---
+## 宣传海报
+<img width="2048" height="1152" alt="横版宣传海报，用于 GitHub README 顶部展示，主题为 NailVista AI美甲试戴与智能运营系统。整体为现代简约风格、专业设计感、浅墨绿色系配色，气质清新、科技、轻女性化但不过分艳俗。画面比例固定为 16_9，适合 README Banner _ Hero 图展示，印刷级质量。__整体配色要求：_- 主色：浅墨绿色 #8FA89A_- 深色标题：深墨绿 #5F7468_- 背景色：雾感米白绿 #F3F6F2_- 辅助色：浅灰绿 #C9" src="https://github.com/user-attachments/assets/0c5cd08a-7826-4c1a-b301-00fa37f246f7" />
+
+---
+
+## 演示视频
+https://github.com/user-attachments/assets/2cb731be-d0ca-4488-a661-0bd5be51942b
 
 ---
 
@@ -434,6 +444,8 @@ nail-vista/
 MIT © 2026
 
 ---
+
+[![Star History Chart](https://api.star-history.com/svg?repos=0ilyCat/nail-vista&type=Date)](https://star-history.com/#0ilyCat/nail-vista&Date)
 
 <div align="center">
 <sub>Built with 💅 by 龙猫队 · Powered by OpenClaw & 百炼 AI</sub>
